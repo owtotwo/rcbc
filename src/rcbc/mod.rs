@@ -78,11 +78,13 @@ fn cli_main(matches: Matches) {
     let src_files: Vec<PathBuf> = src_files.iter().map(PathBuf::from).collect();
 
     for src_file in src_files.iter() {
+        if !src_file.exists() {
+            shutdown_for(&format!("`{}`: No such file or directory",
+                                  src_file.to_str().unwrap()));
+        }
         if !is_source_file(src_file) {
-            shutdown_for(
-                &format!("{}: file format not recognized", 
-                         src_file.to_str().unwrap())
-            );
+            shutdown_for(&format!("`{}`: Not valid C-flat source file (*.cb)", 
+                                  src_file.to_str().unwrap()));
         }
     }
 
