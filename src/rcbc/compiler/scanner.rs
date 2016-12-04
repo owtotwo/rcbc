@@ -50,9 +50,9 @@ impl Scanner {
                 Scanner::scan_string_literal(iter, tokens),
             Some(ref c) if c.is_lowercase() =>
                 Scanner::scan_reserved_words_or_identifier(iter, tokens),
-            Some(ref c) if c.is_alphanumeric() || c == '_' => 
+            Some(ref c) if c.is_alphanumeric() || *c == '_' => 
                 Scanner::scan_identifier(iter, tokens),
-            Some(ref c) if c.is_digit() =>
+            Some(ref c) if c.is_digit(10) =>
                 Scanner::scan_integer(iter, tokens),
             None => unimplemented!(),
             _ => unimplemented!(),
