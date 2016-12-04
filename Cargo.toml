@@ -1,0 +1,7 @@
+[package]
+name = "rcbc"
+version = "0.1.0"
+authors = ["owtotwo <owtotwo@163.com>"]
+
+[dependencies]
+getopts="*"
