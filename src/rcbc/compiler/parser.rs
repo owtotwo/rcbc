@@ -1,3 +1,4 @@
+#![allow(unreachable_code, unused_imports)]
 use super::token::{Token, TokenKind};
 use std::result;
 use std::fmt;
