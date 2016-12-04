@@ -10,7 +10,7 @@ pub enum TokenKind {
     // Integer Literals
     Integer,
     // Character Literals
-    Char,
+    Character,
     // String Literals
     String,
     // Whitespace (blank space, new line, horizontal tab, carriage
@@ -76,4 +76,18 @@ pub enum TokenKind {
     Caret,               // '^'
     Ampersand,           // '&'
     Dollar,              // '$'
+}
+
+impl Token {
+    pub fn new(kind: TokenKind, value: Option<String>) -> Token {
+        match kind {
+            TokenKind::Integer 
+          | TokenKind::String 
+          | TokenKind::Identifier
+          | TokenKind::Character =>
+                Token { kind: kind, value: value },
+            _ =>
+                Token { kind: kind, value: None },
+        }
+    }
 }
