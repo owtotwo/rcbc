@@ -61,7 +61,7 @@ impl<'a> Scanner<'a> {
                     self.scan_string_literal() ?,
                 Some(ref c) if c.is_lowercase() =>
                     self.scan_reserved_words_or_identifier() ?,
-                Some(ref c) if c.is_alphanumeric() || *c == '_' => 
+                Some(ref c) if c.is_alphabetic() || *c == '_' => 
                     self.scan_identifier() ?,
                 Some(ref c) if c.is_digit(10) =>
                     self.scan_integer() ?,
@@ -78,11 +78,11 @@ impl<'a> Scanner<'a> {
         match scout.position(|c| !c.is_whitespace()) {
             Some(0) => panic!("Ln {}, Col {}", self.line, self.column),
             // None if all is space.
-            Some(pos) => self.step(pos),
+            Some(pos) => { self.step(pos); },
             None => { self.iter.by_ref().count(); } // eat all the chars
         };
 
-        self.tokens.push(Token::new(TokenKind::Space, None));
+        // self.tokens.push(Token::new(TokenKind::Space, None));
 
         Ok(())
     }
@@ -123,11 +123,80 @@ impl<'a> Scanner<'a> {
     }
 
     fn scan_reserved_words_or_identifier(&mut self) -> Result<()> {
-        unimplemented!()
+        let s = self.iter.as_str();
+    
+        macro_rules! match_keyword {
+            ($Kw_str: expr, $Kw_kind: ident) => (
+                if s.starts_with($Kw_str) {
+                    match s.chars().nth($Kw_str.len()) {
+                        c @ None | c @ Some(_) if c.is_none() || 
+                                !c.unwrap().is_alphanumeric() &&
+                                 c.unwrap() != '_' => {
+                            self.tokens.push(Token::new(
+                                TokenKind::$Kw_kind, None));
+                            self.step($Kw_str.len());
+                            return Ok(());
+                        }
+                        _ => return self.scan_identifier(),
+                    }
+                }
+            );
+        };
+
+        match_keyword!("void", Void);
+        match_keyword!("char", Char);
+        match_keyword!("short", Short);
+        match_keyword!("int", Int);
+        match_keyword!("long", Long);
+        match_keyword!("struct", Struct);
+        match_keyword!("union", Union);
+        match_keyword!("enum", Enum);
+        match_keyword!("static", Static);
+        match_keyword!("extern", Extern);
+        match_keyword!("const", Const);
+        match_keyword!("signed", Signed);
+        match_keyword!("unsigned", Unsigned);
+        match_keyword!("if", If);
+        match_keyword!("else", Else);
+        match_keyword!("switch", Switch);
+        match_keyword!("case", Case);
+        match_keyword!("default", Default);
+        match_keyword!("while", While);
+        match_keyword!("do", Do);
+        match_keyword!("for", For);
+        match_keyword!("return", Return);
+        match_keyword!("break", Break);
+        match_keyword!("continue", Continue);
+        match_keyword!("goto", Goto);
+        match_keyword!("typedef", Typedef);
+        match_keyword!("import", Import);
+        match_keyword!("sizeof", Sizeof);
+
+        self.scan_identifier()
     }
 
     fn scan_identifier(&mut self) -> Result<()> {
-        unimplemented!()
+        // eat the first char of identifier
+        let c = self.iter.clone().next().unwrap();
+        assert!(c.is_alphabetic() || c == '_');
+
+        let mut scout = self.iter.clone();
+
+        match scout.position(|c| !c.is_alphanumeric() && c != '_') {
+            Some(pos) => {
+                let identifier = self.step(pos);
+                self.tokens.push(Token::new(
+                    TokenKind::Identifier, Some(identifier)));
+            },
+            None => { // EOF
+                let identifier = self.iter.as_str().to_string();
+                self.iter.by_ref().count(); // eat all
+                self.tokens.push(Token::new(
+                    TokenKind::Identifier, Some(identifier)));
+            }
+        }
+
+        Ok(())
     }
 
     fn scan_integer(&mut self) -> Result<()> {
@@ -146,10 +215,12 @@ impl<'a> Scanner<'a> {
         unimplemented!()
     }
 
-    fn step(&mut self, n: usize) {
+    fn step(&mut self, n: usize) -> String {
+        let mut content = String::new();
         for _ in 0..n {
             match self.iter.next() {
                 Some(ref c) => {
+                    content.push(*c);
                     if *c == '\n' {
                         self.line += 1;
                         self.column = 0;
@@ -160,6 +231,7 @@ impl<'a> Scanner<'a> {
                 _ => unreachable!()
             }
         }
+        content
     }
 }
 

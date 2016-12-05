@@ -16,6 +16,9 @@ pub enum TokenKind {
     // Whitespace (blank space, new line, horizontal tab, carriage
     //             return and form feed)
     Space,
+    //Comment
+    BlockComment,
+    LineComment,
     // Reserverd Words
     Void,
     Char,

@@ -55,6 +55,7 @@ impl Compiler {
 
         let mut scanner = Scanner::new(&char_stream);
         let token_stream = scanner.scan() ?;
+        println!("{:?}", token_stream);
 
         let ast = parser.parse(token_stream) ?;
 
