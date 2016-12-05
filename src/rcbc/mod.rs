@@ -72,6 +72,8 @@ fn cli_main(matches: Matches) {
     let exec_file = PathBuf::from(EXECUTABLE_FILE_DEFAULT);
     
     let compiler = compiler::Compiler::new();
+    let cpr_opts = compiler::CompileOptionBuilder::new()
+        .is_dump_tokens(true).finalize();
     let assembler = assembler::Assembler::new();
     let linker = linker::Linker::new();
 
@@ -95,7 +97,7 @@ fn cli_main(matches: Matches) {
         let asm_file = asm_file_name_of(src);
         let obj_file = obj_file_name_of(src);
 
-        if let Err(err) = compiler.compile(&src_file, &asm_file) {
+        if let Err(err) = compiler.compile(&src_file, &asm_file, cpr_opts) {
             println!("Compiler Error: {}", err);
             return;
         }

@@ -35,6 +35,19 @@ pub enum CompileError {
     Parse(ParseError),
 }
 
+#[derive(Debug, Copy, Clone)]
+pub struct CompileOption {
+    is_dump_tokens: bool,
+    is_dump_ast:    bool,
+    is_dump_asm:    bool,
+}
+
+pub struct CompileOptionBuilder {
+    is_dump_tokens: bool,
+    is_dump_ast:    bool,
+    is_dump_asm:    bool,
+}
+
 impl Compiler {
     pub fn new() -> Compiler {
         Compiler {
@@ -43,7 +56,8 @@ impl Compiler {
         }
     }
 
-    pub fn compile(&self, src_file: &Path, asm_file: &Path) -> Result<()> {
+    pub fn compile(&self, src_file: &Path, asm_file: &Path,
+            opts: CompileOption) -> Result<()> {
         println!("I will compile these files: {} to {}", 
                  src_file.to_str().unwrap(), asm_file.to_str().unwrap());
         
@@ -55,7 +69,11 @@ impl Compiler {
 
         let mut scanner = Scanner::new(&char_stream);
         let token_stream = scanner.scan() ?;
-        println!("{:?}", token_stream);
+
+        if opts.is_dump_tokens {
+            for i in &token_stream { println!("{}", i); }
+            return Ok(());
+        }
 
         let ast = parser.parse(token_stream) ?;
 
@@ -92,6 +110,30 @@ impl fmt::Display for CompileError {
                 write!(f, "lexical error: {}", err),
             CompileError::Parse(ref err) =>
                 write!(f, "syntax error: {}", err),
+        }
+    }
+}
+
+
+impl CompileOptionBuilder {
+    pub fn new() -> CompileOptionBuilder {
+        CompileOptionBuilder {
+            is_dump_tokens: false,
+            is_dump_ast: false,
+            is_dump_asm: false,
+        }
+    }
+
+    pub fn is_dump_tokens(&mut self, is_dump: bool) -> &mut Self {
+        self.is_dump_tokens = is_dump;
+        self
+    }
+
+    pub fn finalize(&self) -> CompileOption {
+        CompileOption {
+            is_dump_tokens: self.is_dump_tokens,
+            is_dump_ast: self.is_dump_ast,
+            is_dump_asm: self.is_dump_asm,
         }
     }
 }
