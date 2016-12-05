@@ -32,7 +32,11 @@ pub fn cli() {
     let program = &argv[0];
 
     let mut opts = Options::new();
-    opts.optflag("h", "help", "Show this usage message.");
+    opts.optflag("h", "help", "Display this information");
+    opts.optflag("", "version", "Display compiler version information");
+
+    opts.optflag("", "dump-tokens", "Show the token stream by lexer.");
+
     
     let matches = match opts.parse(&argv[1..]) {
         Ok(val) => val,
@@ -73,7 +77,8 @@ fn cli_main(matches: Matches) {
     
     let compiler = compiler::Compiler::new();
     let cpr_opts = compiler::CompileOptionBuilder::new()
-        .is_dump_tokens(true).finalize();
+        .is_dump_tokens(matches.opt_present("dump-tokens")).finalize();
+
     let assembler = assembler::Assembler::new();
     let linker = linker::Linker::new();
 

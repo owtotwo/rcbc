@@ -123,16 +123,16 @@ impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.kind {
             TokenKind::Identifier => 
-                write!(f, "<IDENTIFIER>     {}", self.value.as_ref().unwrap()),
+                write!(f, "<IDENTIFIER>     {:?}", self.value.as_ref().unwrap()),
             // Integer Literals
             TokenKind::Integer =>
-                write!(f, "<INTEGER>        {}", self.value.as_ref().unwrap()),
+                write!(f, "<INTEGER>        {:?}", self.value.as_ref().unwrap()),
             // Character Literals
             TokenKind::Character =>
-                write!(f, "<CHAR>           {}", self.value.as_ref().unwrap()),
+                write!(f, "<CHAR>           {:?}", self.value.as_ref().unwrap()),
             // String Literals
             TokenKind::String =>
-                write!(f, "<STRING>         {}", self.value.as_ref().unwrap()),
+                write!(f, "<STRING>         {:?}", self.value.as_ref().unwrap()),
             // Whitespace (blank space, new line, horizontal tab, carriage
             //             return and form feed)
             TokenKind::Space =>          "<SPACES>".fmt(f),
