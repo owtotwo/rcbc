@@ -87,11 +87,11 @@ impl fmt::Display for CompileError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             CompileError::IO(ref err) =>
-                write!(f, "Compiler Error: {}", err),
+                write!(f, "io error: {}", err),
             CompileError::Scan(ref err) =>
-                write!(f, "Compiler Error: {}", err),
+                write!(f, "lexical error: {}", err),
             CompileError::Parse(ref err) =>
-                write!(f, "Compiler Error: {}", err),
+                write!(f, "syntax error: {}", err),
         }
     }
 }

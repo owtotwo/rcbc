@@ -79,6 +79,28 @@ pub enum TokenKind {
     Caret,               // '^'
     Ampersand,           // '&'
     Dollar,              // '$'
+    // Compounded Punctuation
+    DoubleEquals,             // "=="
+    NotEqualTo,               // "!="
+    LessThanOrEqualTo,        // "<="
+    GreaterThanOrEqualTo,     // ">="
+    AddAssign,                // "+="
+    SubtractAssign,           // "-="
+    MultiplyAssign,           // "*="
+    DivideAssign,             // "/="
+    ModuloAssign,             // "%="
+    AndAssign,                // "&="
+    ExclusiveOrAssign,        // "^="
+    OrAssign,                 // "|="
+    LogicalAnd,               // "&&"
+    LogicalOr,                // "||"
+    LeftShift,                // "<<"
+    RightShift,               // ">>"
+    Increment,                // "++"
+    Decrement,                // "--"
+    Arrow,                    // "->"
+    LeftShiftAssign,          // "<<="
+    RightShiftAssign,         // ">>="
 }
 
 impl Token {

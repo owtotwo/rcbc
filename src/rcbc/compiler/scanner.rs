@@ -19,11 +19,17 @@ pub struct ScanError {
     line: usize,
     column: usize,
     kind: ScanErrorKind,
+    stray: Option<char>,
 }
 
 #[derive(Debug)]
 pub enum ScanErrorKind {
     CommentBlockNotClosing,
+    InvalidOctalChar,
+    InvalidChar,
+    NotClosingSingalquote,
+    NotClosingDoublequote,
+    StrayChars,
 }
 
 impl<'a> Scanner<'a> {
@@ -48,26 +54,26 @@ impl<'a> Scanner<'a> {
             let mut scout = self.iter.clone();
             match scout.next() {
                 Some(ref c) if c.is_whitespace() =>
-                    self.scan_space() ?,
+                    self.scan_space(),
                 Some('/') => 
                     match scout.next() {
-                        Some('*') => self.scan_block_comment() ?,
-                        Some('/') => self.scan_line_comment() ?,
-                        _         => self.scan_others() ?,
+                        Some('*') => self.scan_block_comment(),
+                        Some('/') => self.scan_line_comment(),
+                        _         => self.scan_operator(),
                     },
                 Some('\'') =>
-                    self.scan_character_literal() ?,
+                    self.scan_character_literal(),
                 Some('\"') =>
-                    self.scan_string_literal() ?,
+                    self.scan_string_literal(),
                 Some(ref c) if c.is_lowercase() =>
-                    self.scan_reserved_words_or_identifier() ?,
+                    self.scan_reserved_words_or_identifier(),
                 Some(ref c) if c.is_alphabetic() || *c == '_' => 
-                    self.scan_identifier() ?,
+                    self.scan_identifier(),
                 Some(ref c) if c.is_digit(10) =>
-                    self.scan_integer() ?,
+                    self.scan_integer(),
+                Some(ref c) => self.scan_operator(),
                 None => break,
-                _ => unreachable!(),
-            };
+            } ?;
         }
         Ok(())
     }
@@ -104,7 +110,7 @@ impl<'a> Scanner<'a> {
                     }
                 },
                 None => return Err(ScanError::new(self.line, self.column,
-                    ScanErrorKind::CommentBlockNotClosing)),
+                    ScanErrorKind::CommentBlockNotClosing, None)),
             };
         }
     }
@@ -176,7 +182,7 @@ impl<'a> Scanner<'a> {
     }
 
     fn scan_identifier(&mut self) -> Result<()> {
-        // eat the first char of identifier
+        // ensure the first char of identifier
         let c = self.iter.clone().next().unwrap();
         assert!(c.is_alphabetic() || c == '_');
 
@@ -190,7 +196,7 @@ impl<'a> Scanner<'a> {
             },
             None => { // EOF
                 let identifier = self.iter.as_str().to_string();
-                self.iter.by_ref().count(); // eat all
+                self.iter.by_ref().count(); // eat all chars
                 self.tokens.push(Token::new(
                     TokenKind::Identifier, Some(identifier)));
             }
@@ -200,19 +206,242 @@ impl<'a> Scanner<'a> {
     }
 
     fn scan_integer(&mut self) -> Result<()> {
-        unimplemented!()
+        let mut scout = self.iter.clone();
+
+        let mut move_count = match scout.next() {
+            Some('0') => {
+                if scout.next() == Some('x') || scout.next() == Some('X') {
+                    self.scan_hexadecimal()
+                } else {
+                    self.scan_octal()
+                }
+            }
+            Some('1' ... '9') =>
+                self.scan_decimal(),
+            _ => unreachable!(),
+        } ?;
+
+        let mut scout = self.iter.clone().skip(move_count).peekable();
+
+        // suffix: 'U' or 'L'
+        if scout.peek() == Some(&'U') {
+            scout.next().unwrap();
+            move_count += 1;
+        }
+        if scout.peek() == Some(&'L') {
+            scout.next().unwrap();
+            move_count += 1;
+        }
+
+        let integer = self.step(move_count);
+        self.tokens.push(Token::new(TokenKind::Integer, Some(integer)));
+
+        Ok(())
+    }
+
+    fn scan_decimal(&mut self) -> Result<usize> {
+        let mut scout = self.iter.clone();
+        match scout.position(|c| !c.is_digit(10)) {
+            Some(0) => unreachable!(),
+            Some(pos) => Ok(pos),
+            None => Ok(self.iter.clone().count()),
+        }
+    }
+
+    // This function could not ensure that the first char of self.iter
+    // is zero (the valid head of octal number).
+    fn scan_octal(&mut self) -> Result<usize> {
+        let mut scout = self.iter.clone();
+        match scout.position(|c| !c.is_digit(8)) {
+            Some(0) => unreachable!(),
+            Some(pos) => Ok(pos),
+            None => Ok(self.iter.clone().count()),
+        }
+    }
+
+    // This function could not ensure that the first two chars of
+    // self.iter are zero and alpha 'x' or 'X' (the valid head of
+    // hexadecimal number).
+    fn scan_hexadecimal(&mut self) -> Result<usize> {
+        let mut scout = self.iter.clone().skip(2);
+        match scout.position(|c| !c.is_digit(16)) {
+            Some(0) => unreachable!(),
+            Some(pos) => Ok(pos + 2),
+            None => Ok(self.iter.clone().count()),
+        }
     }
 
     fn scan_character_literal(&mut self) -> Result<()> {
-        unimplemented!()
+        let mut scout = self.iter.clone();
+        assert_eq!(scout.next(), Some('\''));
+
+        let move_count;
+
+        match scout.next() {
+            // octal represent a char
+            Some('\\') => {
+                match scout.next() {
+                    // regex `'\\[0-7]{3}'`
+                    Some('0' ... '7') => {
+                        for _ in 0..2 { match scout.next() {
+                            Some('0' ... '7') => { /* should be */ },
+                            _ => return Err(ScanError::new(self.line,
+                                self.column,
+                                ScanErrorKind::InvalidOctalChar,
+                                None
+                            )),
+                        }}
+                        move_count = 6;
+                    },
+                    // regex `'\\.'`
+                    _ => { // an arbitrary char
+                        move_count = 4;
+                    },
+                }
+            },
+            Some(ref c) => {
+                if *c == '\n' {
+                    return Err(ScanError::new(self.line, self.column,
+                        ScanErrorKind::InvalidChar, None));
+                }
+                move_count = 3;
+            }
+            None => {
+                return Err(ScanError::new(self.line, self.column,
+                    ScanErrorKind::NotClosingSingalquote, None));
+            }
+        }
+
+        // The closing single quote
+        match scout.next() {
+            Some('\'') => {
+                let character = self.step(move_count);
+                self.tokens.push(Token::new(
+                    TokenKind::Character, Some(character)));
+            },
+            _ => return Err(ScanError::new(self.line, self.column,
+                    ScanErrorKind::NotClosingSingalquote, None)),
+        }
+
+        Ok(())
     }
 
     fn scan_string_literal(&mut self) -> Result<()> {
-        unimplemented!()
+        let mut scout = self.iter.clone();
+        assert_eq!(scout.next(), Some('\"'));
+
+        let mut move_count = 1;
+
+        loop { match scout.next() {
+            // end of string
+            Some('\"') => {
+                move_count += 1;
+                let string = self.step(move_count);
+                self.tokens.push(Token::new(
+                    TokenKind::String, Some(string)));
+                return Ok(());
+            },
+            // escape char
+            Some('\\') => {
+                match scout.next() {
+                    // regex `"...(\\[0-7]{3})..."`
+                    Some('0' ... '7') => {
+                        for _ in 0..2 { match scout.next() {
+                            Some('0' ... '7') => { /* should be */ },
+                            _ => return Err(ScanError::new(self.line,
+                                self.column,
+                                ScanErrorKind::InvalidOctalChar,
+                                None
+                            )),
+                        }}
+                        move_count += 4;
+                    },
+                    // regex `"...(\\.)..."`
+                    _ => { // an arbitrary char, but '\n' to none
+                        move_count += 2;
+                    },
+                }
+            },
+            Some(ref c) if *c != '\n' => {
+                move_count += 1;
+            },
+            _ => {
+                return Err(ScanError::new(self.line, self.column,
+                    ScanErrorKind::NotClosingDoublequote, None));
+            }
+        }}
     }
 
-    fn scan_others(&mut self) -> Result<()> {
-        unimplemented!()
+    fn scan_operator(&mut self) -> Result<()> {
+        let s = self.iter.as_str();
+
+        macro_rules! match_operator {
+            ($Kw_str: expr, $Kw_kind: ident) => (
+                if s.starts_with($Kw_str) {
+                    self.iter.nth($Kw_str.len() - 1).unwrap();
+                    self.tokens.push(Token::new(TokenKind::$Kw_kind, None));                    
+                    return Ok(())
+                }
+            );
+        };
+
+        match_operator!("<<=", LeftShiftAssign);
+        match_operator!(">>=", RightShiftAssign);
+
+        match_operator!("==", DoubleEquals);
+        match_operator!("!=", NotEqualTo);
+        match_operator!("<=", LessThanOrEqualTo);
+        match_operator!(">=", GreaterThanOrEqualTo);
+        match_operator!("+=", AddAssign);
+        match_operator!("-=", SubtractAssign);
+        match_operator!("*=", MultiplyAssign);
+        match_operator!("/=", DivideAssign);
+        match_operator!("%=", ModuloAssign);
+        match_operator!("&=", AndAssign);
+        match_operator!("^=", ExclusiveOrAssign);
+        match_operator!("|=", OrAssign);
+        match_operator!("&&", LogicalAnd);
+        match_operator!("||", LogicalOr);
+        match_operator!("<<", LeftShift);
+        match_operator!(">>", RightShift);
+        match_operator!("++", Increment);
+        match_operator!("--", Decrement);
+        match_operator!("->", Arrow);
+
+        match_operator!(",", Comma);
+        match_operator!(":", Colon);
+        match_operator!(";", Semicolon);
+        match_operator!("=", Equals);
+        match_operator!("_", Underscore);
+        match_operator!("<", LessThan);
+        match_operator!(">", GreaterThan);
+        match_operator!("[", OpeningBracket);
+        match_operator!("]", ClosingBracket);
+        match_operator!("{", LeftCurlyBracket);
+        match_operator!("}", RightCurlyBracket);
+        match_operator!("(", OpenParentheses);
+        match_operator!(")", CloseParentheses);
+        match_operator!("\'", SingleQuote);
+        match_operator!("\"", DoubleQuotes);
+        match_operator!(".", Dot);
+        match_operator!("/", Slash);
+        match_operator!("\\", Backslash);
+        match_operator!("+", Plus);
+        match_operator!("-", Hyphen);
+        match_operator!("?", QuestionMark);
+        match_operator!("!", ExclamationMark);
+        match_operator!("~", Tilde);
+        match_operator!("#", Number);
+        match_operator!("|", VerticalBar);
+        match_operator!("*", Asterisk);
+        match_operator!("%", Procenttecken);
+        match_operator!("^", Caret);
+        match_operator!("&", Ampersand);
+        match_operator!("$", Dollar);
+
+        let stray = s.chars().next().unwrap();
+        Err(ScanError::new(self.line, self.column,
+                           ScanErrorKind::StrayChars, Some(stray)))
     }
 
     fn step(&mut self, n: usize) -> String {
@@ -237,18 +466,29 @@ impl<'a> Scanner<'a> {
 
 
 impl ScanError {
-    fn new(line: usize, column: usize, kind: ScanErrorKind) -> ScanError {
-        ScanError { line: line, column: column, kind: kind }
+    fn new(line: usize, column: usize, kind: ScanErrorKind, 
+           stray: Option<char>) -> ScanError {
+        ScanError { line: line, column: column, kind: kind, stray: stray }
     }
 }
 
 
 impl fmt::Display for ScanError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}:{}: ", self.line, self.column) ?;
+        write!(f, "Ln {}, Col {}: ", self.line, self.column) ?;
         match self.kind {
             ScanErrorKind::CommentBlockNotClosing =>
                 write!(f, "the comment block is not closing"),
+            ScanErrorKind::InvalidOctalChar =>
+                write!(f, "invalid octal number represented char"),
+            ScanErrorKind::InvalidChar =>
+                write!(f, "invalid char"),
+            ScanErrorKind::NotClosingSingalquote =>
+                write!(f, "need a closing single quote for the char"),
+            ScanErrorKind::NotClosingDoublequote =>
+                write!(f, "need a closing double quote for a string"),
+            ScanErrorKind::StrayChars =>
+                write!(f, "stray ‘{}’ in program", self.stray.unwrap()),
         }
     }
 }
