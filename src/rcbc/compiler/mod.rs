@@ -44,16 +44,17 @@ impl Compiler {
     }
 
     pub fn compile(&self, src_file: &Path, asm_file: &Path) -> Result<()> {
-        println!("I will compile these files: \n{}\nto\n{}", 
+        println!("I will compile these files: {} to {}", 
                  src_file.to_str().unwrap(), asm_file.to_str().unwrap());
-        let mut scanner = Scanner::new();
+        
         let mut parser = Parser::new();
         let mut char_stream = String::new();
 
         File::open(src_file)
              .and_then(|mut src| src.read_to_string(&mut char_stream)) ?;
 
-        let token_stream = scanner.scan(char_stream) ?;
+        let mut scanner = Scanner::new(&char_stream);
+        let token_stream = scanner.scan() ?;
 
         let ast = parser.parse(token_stream) ?;
 
