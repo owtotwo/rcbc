@@ -103,6 +103,8 @@ pub enum TokenKind {
     Arrow,                    // "->"
     LeftShiftAssign,          // "<<="
     RightShiftAssign,         // ">>="
+    // End of file
+    EOF,
 }
 
 impl Token {
@@ -221,6 +223,8 @@ impl fmt::Display for Token {
             TokenKind::Arrow =>                   "`->`".fmt(f),
             TokenKind::LeftShiftAssign =>         "`<<=`".fmt(f),
             TokenKind::RightShiftAssign =>        "`>>=`".fmt(f),
+            // End of file
+            TokenKind::EOF =>                     "<EOF>".fmt(f),
         }
     }
 }

@@ -72,7 +72,10 @@ impl<'a> Scanner<'a> {
                 Some(ref c) if c.is_digit(10) =>
                     self.scan_integer(),
                 Some(ref c) => self.scan_operator(),
-                None => break,
+                None => {
+                    self.tokens.push(Token::new(TokenKind::EOF, None));
+                    break;
+                },
             } ?;
         }
         Ok(())
