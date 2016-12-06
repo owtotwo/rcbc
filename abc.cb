@@ -1,29 +1,6 @@
-//////////\
->
-== 
- kflsdj ;lasgjasgiqwirg qwlqwpe9-283 t51349t24rt8 9491=++_D*(*7  //
-voidFunction int_
-"s\077adgfjasdlghasdjgkjasdfgasdkfjas"
-== <<=
-"\\ \" \'\""
-int long         //  
- 12345U
- 854315745919UL
- 1L
-     /***/
-     'a' 'b'
-     '\\' '\'' '\"'
-     '\012'
+import stdio;
 
-     /*   *///
-      struct
-int main cout
-    ping
-110
-0x1312abc
-0123
-0
-111
-0xabcdefg
-对不起 我爱你 这_是_下划线__ _a_
-<=
+int main(int argc, char** argv) {
+    printf("Hello World!\n");
+    return 0;
+}

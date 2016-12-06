@@ -73,7 +73,8 @@ impl<'a> Scanner<'a> {
                     self.scan_integer(),
                 Some(ref c) => self.scan_operator(),
                 None => {
-                    self.tokens.push(Token::new(TokenKind::EOF, None));
+                    self.tokens.push(Token::new(
+                        TokenKind::EOF, None, self.line, self.column));
                     break;
                 },
             } ?;
@@ -91,7 +92,7 @@ impl<'a> Scanner<'a> {
             None => { self.iter.by_ref().count(); } // eat all the chars
         };
 
-        // self.tokens.push(Token::new(TokenKind::Space, None));
+        // self.tokens.push(Token::new(TokenKind::Space, None, self.line, self.column));
 
         Ok(())
     }
@@ -142,7 +143,8 @@ impl<'a> Scanner<'a> {
                                 !c.unwrap().is_alphanumeric() &&
                                  c.unwrap() != '_' => {
                             self.tokens.push(Token::new(
-                                TokenKind::$Kw_kind, None));
+                                TokenKind::$Kw_kind, None,
+                                self.line, self.column));
                             self.step($Kw_str.len());
                             return Ok(());
                         }
@@ -193,15 +195,17 @@ impl<'a> Scanner<'a> {
 
         match scout.position(|c| !c.is_alphanumeric() && c != '_') {
             Some(pos) => {
+                let (ln, col) = (self.line, self.column);
                 let identifier = self.step(pos);
                 self.tokens.push(Token::new(
-                    TokenKind::Identifier, Some(identifier)));
+                    TokenKind::Identifier, Some(identifier), ln, col));
             },
             None => { // EOF
                 let identifier = self.iter.as_str().to_string();
                 self.iter.by_ref().count(); // eat all chars
                 self.tokens.push(Token::new(
-                    TokenKind::Identifier, Some(identifier)));
+                    TokenKind::Identifier, Some(identifier),
+                    self.line, self.column));
             }
         }
 
@@ -236,8 +240,9 @@ impl<'a> Scanner<'a> {
             move_count += 1;
         }
 
+        let (ln, col) = (self.line, self.column);
         let integer = self.step(move_count);
-        self.tokens.push(Token::new(TokenKind::Integer, Some(integer)));
+        self.tokens.push(Token::new(TokenKind::Integer, Some(integer), ln, col));
 
         Ok(())
     }
@@ -318,9 +323,10 @@ impl<'a> Scanner<'a> {
         // The closing single quote
         match scout.next() {
             Some('\'') => {
+                let (ln, col) = (self.line, self.column);
                 let character = self.step(move_count);
                 self.tokens.push(Token::new(
-                    TokenKind::Character, Some(character)));
+                    TokenKind::Character, Some(character), ln, col));
             },
             _ => return Err(ScanError::new(self.line, self.column,
                     ScanErrorKind::NotClosingSingalquote, None)),
@@ -339,9 +345,10 @@ impl<'a> Scanner<'a> {
             // end of string
             Some('\"') => {
                 move_count += 1;
+                let (ln, col) = (self.line, self.column);
                 let string = self.step(move_count);
                 self.tokens.push(Token::new(
-                    TokenKind::String, Some(string)));
+                    TokenKind::String, Some(string), ln, col));
                 return Ok(());
             },
             // escape char
@@ -381,8 +388,10 @@ impl<'a> Scanner<'a> {
         macro_rules! match_operator {
             ($Kw_str: expr, $Kw_kind: ident) => (
                 if s.starts_with($Kw_str) {
-                    self.iter.nth($Kw_str.len() - 1).unwrap();
-                    self.tokens.push(Token::new(TokenKind::$Kw_kind, None));                    
+                    let (ln, col) = (self.line, self.column);
+                    self.step($Kw_str.len());
+                    self.tokens.push(Token::new(
+                        TokenKind::$Kw_kind, None, ln, col));                    
                     return Ok(())
                 }
             );

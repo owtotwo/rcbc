@@ -61,7 +61,7 @@ impl Compiler {
         println!("I will compile these files: {} to {}", 
                  src_file.to_str().unwrap(), asm_file.to_str().unwrap());
         
-        let mut parser = Parser::new();
+        
         let mut char_stream = String::new();
 
         File::open(src_file)
@@ -75,7 +75,9 @@ impl Compiler {
             return Ok(());
         }
 
-        let ast = parser.parse(token_stream) ?;
+        let mut parser = Parser::new(&token_stream);
+
+        let ast = parser.parse() ?;
 
         File::create(src_file)
              .and_then(|mut asm| asm.write("Something...".as_bytes())) ?;

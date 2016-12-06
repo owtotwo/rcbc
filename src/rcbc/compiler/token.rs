@@ -4,6 +4,8 @@ use std::fmt;
 pub struct Token {
     kind: TokenKind,
     value: Option<String>, // semantic value
+    line: usize,
+    column: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -108,15 +110,18 @@ pub enum TokenKind {
 }
 
 impl Token {
-    pub fn new(kind: TokenKind, value: Option<String>) -> Token {
+    pub fn new(kind: TokenKind, value: Option<String>,
+            line: usize, column: usize) -> Token {
         match kind {
             TokenKind::Integer 
           | TokenKind::String 
           | TokenKind::Identifier
           | TokenKind::Character =>
-                Token { kind: kind, value: value },
+                Token { kind: kind, value: value,
+                        line: line, column: column },
             _ =>
-                Token { kind: kind, value: None },
+                Token { kind: kind, value: None,
+                        line: line, column: column },
         }
     }
 }
