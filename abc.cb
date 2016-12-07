@@ -1,6 +1,8 @@
 import stdio;
-
+/**
+ * This is Block Comment!
+ */
 int main(int argc, char** argv) {
     printf("Hello World!\n");
-    return 0;
+    return 0; // This is Line Comment.
 }

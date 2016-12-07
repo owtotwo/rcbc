@@ -4,8 +4,10 @@ use std::fmt;
 pub struct Token {
     kind: TokenKind,
     value: Option<String>, // semantic value
-    line: usize,
-    column: usize,
+    begin_line: usize,
+    begin_column: usize,
+    end_line: usize,
+    end_column: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -111,17 +113,33 @@ pub enum TokenKind {
 
 impl Token {
     pub fn new(kind: TokenKind, value: Option<String>,
-            line: usize, column: usize) -> Token {
+            begin_line: usize, begin_column: usize,
+            end_line: usize, end_column: usize) -> Token {
         match kind {
             TokenKind::Integer 
           | TokenKind::String 
           | TokenKind::Identifier
-          | TokenKind::Character =>
-                Token { kind: kind, value: value,
-                        line: line, column: column },
+          | TokenKind::Character
+          | TokenKind::Space
+          | TokenKind::BlockComment
+          | TokenKind::LineComment =>
+                Token {
+                    kind: kind, 
+                    value: value,
+                    begin_line: begin_line,
+                    begin_column: begin_column,
+                    end_line: end_line,
+                    end_column: end_column
+                },
             _ =>
-                Token { kind: kind, value: None,
-                        line: line, column: column },
+                Token {
+                    kind: kind, 
+                    value: None,
+                    begin_line: begin_line,
+                    begin_column: begin_column,
+                    end_line: end_line,
+                    end_column: end_column
+                },
         }
     }
 }
@@ -142,10 +160,13 @@ impl fmt::Display for Token {
                 write!(f, "<STRING>         {:?}", self.value.as_ref().unwrap()),
             // Whitespace (blank space, new line, horizontal tab, carriage
             //             return and form feed)
-            TokenKind::Space =>          "<SPACES>".fmt(f),
+            TokenKind::Space =>
+                write!(f, "<SPACES>         {:?}", self.value.as_ref().unwrap()),
             //Comment
-            TokenKind::BlockComment =>   "`/* block comment */`".fmt(f),
-            TokenKind::LineComment =>    "`// line comment`".fmt(f),
+            TokenKind::BlockComment =>
+                write!(f, "<BLOCK COMMENT>  {:?}", self.value.as_ref().unwrap()),
+            TokenKind::LineComment =>
+                write!(f, "<Line COMMENT>   {:?}", self.value.as_ref().unwrap()),
             // Reserverd Words
             TokenKind::Void =>        "`void`".fmt(f),
             TokenKind::Char =>        "`char`".fmt(f),

@@ -74,7 +74,8 @@ impl<'a> Scanner<'a> {
                 Some(ref c) => self.scan_operator(),
                 None => {
                     self.tokens.push(Token::new(
-                        TokenKind::EOF, None, self.line, self.column));
+                        TokenKind::EOF, None, self.line, self.column,
+                        self.line, self.column));
                     break;
                 },
             } ?;
@@ -84,32 +85,43 @@ impl<'a> Scanner<'a> {
 
     fn scan_space(&mut self) -> Result<()> {
         let mut scout = self.iter.clone();
+        let content;
 
         match scout.position(|c| !c.is_whitespace()) {
-            Some(0) => panic!("Ln {}, Col {}", self.line, self.column),
-            // None if all is space.
-            Some(pos) => { self.step(pos); },
-            None => { self.iter.by_ref().count(); } // eat all the chars
+            Some(0) => unreachable!(),
+            Some(pos) => { content = self.step(pos); },
+            // None if all is space, eat all the chars.
+            None => {
+                let len = self.iter.clone().count();
+                content = self.step(len);
+            }
         };
 
-        // self.tokens.push(Token::new(TokenKind::Space, None, self.line, self.column));
+        self.tokens.push(Token::new(
+            TokenKind::Space, Some(content), self.line, self.column,
+            self.line, self.column));
 
         Ok(())
     }
 
     fn scan_block_comment(&mut self) -> Result<()> {
         assert!(self.iter.as_str().starts_with("/*"));
-        self.step(2);
+        let mut move_count = 2;
 
         // find "*/"
         let mut scout = self.iter.clone();
-        let mut move_count = 0;
+        scout.nth(1).unwrap(); // step 2
+
         loop {
             match scout.by_ref().position(|c| c == '*') {
                 Some(pos) => {
                     move_count += pos + 1;
                     if scout.clone().next() == Some('/') {
-                        self.step(move_count + 1);
+                        let (ln, col) = (self.line, self.column);
+                        let comments = self.step(move_count + 1);
+                        self.tokens.push(Token::new(
+                            TokenKind::BlockComment, Some(comments), ln, col,
+                            self.line, self.column));
                         return Ok(())
                     }
                 },
@@ -121,14 +133,18 @@ impl<'a> Scanner<'a> {
 
     fn scan_line_comment(&mut self) -> Result<()> {
         assert!(self.iter.as_str().starts_with("//"));
-        self.step(2);
 
         // find '\n'
         let mut scout = self.iter.clone();
 
         if let Some(pos) = scout.position(|c| c == '\n') {
-            self.step(pos + 1);
+            let (ln, col) = (self.line, self.column);
+            let comment = self.step(pos + 1);
+            self.tokens.push(Token::new(
+                TokenKind::LineComment, Some(comment), ln, col,
+                self.line, self.column));
         }
+
         Ok(())
     }
 
@@ -142,10 +158,11 @@ impl<'a> Scanner<'a> {
                         c @ None | c @ Some(_) if c.is_none() || 
                                 !c.unwrap().is_alphanumeric() &&
                                  c.unwrap() != '_' => {
-                            self.tokens.push(Token::new(
-                                TokenKind::$Kw_kind, None,
-                                self.line, self.column));
+                            let (ln, col) = (self.line, self.column);
                             self.step($Kw_str.len());
+                            self.tokens.push(Token::new(
+                                TokenKind::$Kw_kind, None, ln, col,
+                                self.line, self.column));
                             return Ok(());
                         }
                         _ => return self.scan_identifier(),
@@ -198,13 +215,15 @@ impl<'a> Scanner<'a> {
                 let (ln, col) = (self.line, self.column);
                 let identifier = self.step(pos);
                 self.tokens.push(Token::new(
-                    TokenKind::Identifier, Some(identifier), ln, col));
+                    TokenKind::Identifier, Some(identifier), ln, col,
+                    self.line, self.column));
             },
             None => { // EOF
                 let identifier = self.iter.as_str().to_string();
-                self.iter.by_ref().count(); // eat all chars
+                let (ln, col) = (self.line, self.column);
+                self.step(identifier.len()); // eat all chars
                 self.tokens.push(Token::new(
-                    TokenKind::Identifier, Some(identifier),
+                    TokenKind::Identifier, Some(identifier), ln, col,
                     self.line, self.column));
             }
         }
@@ -242,7 +261,9 @@ impl<'a> Scanner<'a> {
 
         let (ln, col) = (self.line, self.column);
         let integer = self.step(move_count);
-        self.tokens.push(Token::new(TokenKind::Integer, Some(integer), ln, col));
+        self.tokens.push(Token::new(
+            TokenKind::Integer, Some(integer), ln, col,
+            self.line, self.column));
 
         Ok(())
     }
@@ -326,7 +347,8 @@ impl<'a> Scanner<'a> {
                 let (ln, col) = (self.line, self.column);
                 let character = self.step(move_count);
                 self.tokens.push(Token::new(
-                    TokenKind::Character, Some(character), ln, col));
+                    TokenKind::Character, Some(character), ln, col,
+                    self.line, self.column));
             },
             _ => return Err(ScanError::new(self.line, self.column,
                     ScanErrorKind::NotClosingSingalquote, None)),
@@ -348,7 +370,8 @@ impl<'a> Scanner<'a> {
                 let (ln, col) = (self.line, self.column);
                 let string = self.step(move_count);
                 self.tokens.push(Token::new(
-                    TokenKind::String, Some(string), ln, col));
+                    TokenKind::String, Some(string), ln, col,
+                    self.line, self.column));
                 return Ok(());
             },
             // escape char
@@ -391,7 +414,8 @@ impl<'a> Scanner<'a> {
                     let (ln, col) = (self.line, self.column);
                     self.step($Kw_str.len());
                     self.tokens.push(Token::new(
-                        TokenKind::$Kw_kind, None, ln, col));                    
+                        TokenKind::$Kw_kind, None, ln, col,
+                        self.line, self.column));                    
                     return Ok(())
                 }
             );
