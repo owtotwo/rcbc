@@ -8,7 +8,7 @@ type Result<T> = result::Result<T, ParseError>;
 
 #[derive(Debug, Clone)]
 pub struct Parser<'a> {
-    iter: Iter<'a, Token>,
+    iter: Iter<'a, Token<'a>>,
 }
 
 #[derive(Debug)]

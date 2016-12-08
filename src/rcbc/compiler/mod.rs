@@ -13,9 +13,11 @@ use std::result;
 use self::scanner::{Scanner, ScanError};
 use self::parser::{Parser, ParseError};
 
+mod location;
 mod scanner;
 mod token;
 mod parser;
+mod ast;
 
 const COMPILER_NAME:    &'static str = "rcbc";
 const COMPILER_VERSION: &'static str = "0.0.1";
@@ -38,14 +40,14 @@ pub enum CompileError {
 #[derive(Debug, Copy, Clone)]
 pub struct CompileOption {
     is_dump_tokens: bool,
-    is_dump_ast:    bool,
-    is_dump_asm:    bool,
+    is_dump_ast: bool,
+    is_dump_asm: bool,
 }
 
 pub struct CompileOptionBuilder {
     is_dump_tokens: bool,
-    is_dump_ast:    bool,
-    is_dump_asm:    bool,
+    is_dump_ast: bool,
+    is_dump_asm: bool,
 }
 
 impl Compiler {
@@ -67,7 +69,7 @@ impl Compiler {
         File::open(src_file)
              .and_then(|mut src| src.read_to_string(&mut char_stream)) ?;
 
-        let mut scanner = Scanner::new(&char_stream);
+        let mut scanner = Scanner::new(src_file, &char_stream);
         let token_stream = scanner.scan() ?;
 
         if opts.is_dump_tokens {

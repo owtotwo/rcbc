@@ -1,17 +1,20 @@
 #![allow(unused_imports, unreachable_code)]
 use super::token::{Token, TokenKind};
+use super::location::Location;
 use std::result;
 use std::fmt;
 use std::str::Chars;
 use std::iter::Peekable;
+use std::path::Path;
 
 type Result<T> = result::Result<T, ScanError>;
 
 pub struct Scanner<'a> {
+    file: &'a Path,
     iter: Chars<'a>,
     line: usize,
     column: usize,
-    tokens: Vec<Token>,
+    tokens: Vec<Token<'a>>,
 }
 
 #[derive(Debug)]
@@ -33,8 +36,9 @@ pub enum ScanErrorKind {
 }
 
 impl<'a> Scanner<'a> {
-    pub fn new(stream: &'a String) -> Scanner<'a> {
+    pub fn new(file: &'a Path, stream: &'a String) -> Scanner<'a> {
         Scanner {
+            file: file,
             iter: stream.chars(),
             line: 1,
             column: 1,
@@ -73,9 +77,10 @@ impl<'a> Scanner<'a> {
                     self.scan_integer(),
                 Some(ref c) => self.scan_operator(),
                 None => {
-                    self.tokens.push(Token::new(
-                        TokenKind::EOF, None, self.line, self.column,
-                        self.line, self.column));
+                    let location = Location::new(self.file, self.line,
+                        self.column, self.line, self.column);
+                    self.tokens.push(Token::new(TokenKind::EOF, None,
+                                                location));
                     break;
                 },
             } ?;
@@ -86,10 +91,13 @@ impl<'a> Scanner<'a> {
     fn scan_space(&mut self) -> Result<()> {
         let mut scout = self.iter.clone();
         let content;
+        let (ln, col) = (self.line, self.column);
 
         match scout.position(|c| !c.is_whitespace()) {
             Some(0) => unreachable!(),
-            Some(pos) => { content = self.step(pos); },
+            Some(pos) => {
+                content = self.step(pos);
+            },
             // None if all is space, eat all the chars.
             None => {
                 let len = self.iter.clone().count();
@@ -97,9 +105,10 @@ impl<'a> Scanner<'a> {
             }
         };
 
-        self.tokens.push(Token::new(
-            TokenKind::Space, Some(content), self.line, self.column,
-            self.line, self.column));
+        let location = Location::new(self.file, ln, col,
+            self.line, self.column);
+        self.tokens.push(Token::new(TokenKind::Space, Some(content),
+                                    location));
 
         Ok(())
     }
@@ -119,9 +128,10 @@ impl<'a> Scanner<'a> {
                     if scout.clone().next() == Some('/') {
                         let (ln, col) = (self.line, self.column);
                         let comments = self.step(move_count + 1);
-                        self.tokens.push(Token::new(
-                            TokenKind::BlockComment, Some(comments), ln, col,
-                            self.line, self.column));
+                        let location = Location::new(self.file, ln, col,
+                                                     self.line, self.column);
+                        self.tokens.push(Token::new(TokenKind::BlockComment,
+                            Some(comments), location));
                         return Ok(())
                     }
                 },
@@ -140,9 +150,10 @@ impl<'a> Scanner<'a> {
         if let Some(pos) = scout.position(|c| c == '\n') {
             let (ln, col) = (self.line, self.column);
             let comment = self.step(pos + 1);
-            self.tokens.push(Token::new(
-                TokenKind::LineComment, Some(comment), ln, col,
-                self.line, self.column));
+            let location = Location::new(self.file, ln, col,
+                                         self.line, self.column);
+            self.tokens.push(Token::new(TokenKind::LineComment, Some(comment),
+                                        location));
         }
 
         Ok(())
@@ -160,9 +171,10 @@ impl<'a> Scanner<'a> {
                                  c.unwrap() != '_' => {
                             let (ln, col) = (self.line, self.column);
                             self.step($Kw_str.len());
-                            self.tokens.push(Token::new(
-                                TokenKind::$Kw_kind, None, ln, col,
-                                self.line, self.column));
+                            let location = Location::new(self.file, ln, col,
+                                self.line, self.column);
+                            self.tokens.push(Token::new(TokenKind::$Kw_kind,
+                                                        None, location));
                             return Ok(());
                         }
                         _ => return self.scan_identifier(),
@@ -214,17 +226,19 @@ impl<'a> Scanner<'a> {
             Some(pos) => {
                 let (ln, col) = (self.line, self.column);
                 let identifier = self.step(pos);
-                self.tokens.push(Token::new(
-                    TokenKind::Identifier, Some(identifier), ln, col,
-                    self.line, self.column));
+                let location = Location::new(self.file, ln, col,
+                                             self.line, self.column);
+                self.tokens.push(Token::new(TokenKind::Identifier,
+                                            Some(identifier), location));
             },
             None => { // EOF
                 let identifier = self.iter.as_str().to_string();
                 let (ln, col) = (self.line, self.column);
                 self.step(identifier.len()); // eat all chars
-                self.tokens.push(Token::new(
-                    TokenKind::Identifier, Some(identifier), ln, col,
-                    self.line, self.column));
+                let location = Location::new(self.file, ln, col,
+                                             self.line, self.column);
+                self.tokens.push(Token::new(TokenKind::Identifier,
+                    Some(identifier), location));
             }
         }
 
@@ -261,9 +275,10 @@ impl<'a> Scanner<'a> {
 
         let (ln, col) = (self.line, self.column);
         let integer = self.step(move_count);
-        self.tokens.push(Token::new(
-            TokenKind::Integer, Some(integer), ln, col,
-            self.line, self.column));
+        let location = Location::new(self.file, ln, col,
+                                     self.line, self.column);
+        self.tokens.push(Token::new(TokenKind::Integer, Some(integer),
+                                    location));
 
         Ok(())
     }
@@ -346,9 +361,10 @@ impl<'a> Scanner<'a> {
             Some('\'') => {
                 let (ln, col) = (self.line, self.column);
                 let character = self.step(move_count);
-                self.tokens.push(Token::new(
-                    TokenKind::Character, Some(character), ln, col,
-                    self.line, self.column));
+                let location = Location::new(self.file, ln, col,
+                                             self.line, self.column);
+                self.tokens.push(Token::new(TokenKind::Character, 
+                    Some(character), location));
             },
             _ => return Err(ScanError::new(self.line, self.column,
                     ScanErrorKind::NotClosingSingalquote, None)),
@@ -369,9 +385,10 @@ impl<'a> Scanner<'a> {
                 move_count += 1;
                 let (ln, col) = (self.line, self.column);
                 let string = self.step(move_count);
-                self.tokens.push(Token::new(
-                    TokenKind::String, Some(string), ln, col,
-                    self.line, self.column));
+                let location = Location::new(self.file, ln, col,
+                                             self.line, self.column);
+                self.tokens.push(Token::new(TokenKind::String, Some(string),
+                                            location));
                 return Ok(());
             },
             // escape char
@@ -413,9 +430,10 @@ impl<'a> Scanner<'a> {
                 if s.starts_with($Kw_str) {
                     let (ln, col) = (self.line, self.column);
                     self.step($Kw_str.len());
-                    self.tokens.push(Token::new(
-                        TokenKind::$Kw_kind, None, ln, col,
-                        self.line, self.column));                    
+                    let location = Location::new(self.file, ln, col,
+                                                 self.line, self.column);
+                    self.tokens.push(Token::new(TokenKind::$Kw_kind, None,
+                                                location));                    
                     return Ok(())
                 }
             );

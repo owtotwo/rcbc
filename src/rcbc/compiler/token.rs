@@ -1,13 +1,11 @@
 use std::fmt;
+use super::location::Location;
 
 #[derive(Debug, Clone)]
-pub struct Token {
+pub struct Token<'a> {
     kind: TokenKind,
     value: Option<String>, // semantic value
-    begin_line: usize,
-    begin_column: usize,
-    end_line: usize,
-    end_column: usize,
+    location: Location<'a>,
 }
 
 #[derive(Debug, Clone)]
@@ -111,10 +109,9 @@ pub enum TokenKind {
     EOF,
 }
 
-impl Token {
+impl<'a> Token<'a> {
     pub fn new(kind: TokenKind, value: Option<String>,
-            begin_line: usize, begin_column: usize,
-            end_line: usize, end_column: usize) -> Token {
+            location: Location<'a>) -> Token<'a> {
         match kind {
             TokenKind::Integer 
           | TokenKind::String 
@@ -126,25 +123,19 @@ impl Token {
                 Token {
                     kind: kind, 
                     value: value,
-                    begin_line: begin_line,
-                    begin_column: begin_column,
-                    end_line: end_line,
-                    end_column: end_column
+                    location: location,
                 },
             _ =>
                 Token {
                     kind: kind, 
                     value: None,
-                    begin_line: begin_line,
-                    begin_column: begin_column,
-                    end_line: end_line,
-                    end_column: end_column
+                    location: location,
                 },
         }
     }
 }
 
-impl fmt::Display for Token {
+impl<'a> fmt::Display for Token<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.kind {
             TokenKind::Identifier => 
