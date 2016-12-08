@@ -1,105 +1,96 @@
-use std::path::PathBuf;
+use super::location::Location;
 use std::collections::BTreeSet;
 
 #[derive(Debug, Clone)]
-pub struct AST {
-    source: Location,
-    declarations: Declarations,
+pub struct AST<'a> {
+    source: Location<'a>,
+    declarations: Declarations<'a>,
 }
 
 #[derive(Debug, Clone)]
-pub struct Location {
-    file: PathBuf,
-    begin_line: usize,
-    begin_column: usize,
-    end_line: usize,
-    end_column: usize,
+pub struct Declarations<'a> {
+    defvars: BTreeSet<DefinedVariable<'a>>,
+    vardecls: BTreeSet<UndefinedVariable<'a>>,
+    defuns: BTreeSet<DefinedFunction<'a>>,
+    funcdecls: BTreeSet<UndefinedFunction<'a>>,
+    constants: BTreeSet<Constant<'a>>,
+    defstructs: BTreeSet<StructNode<'a>>,
+    defunions: BTreeSet<UnionNode<'a>>,
+    typedefs: BTreeSet<TypedefNode<'a>>,
 }
 
 #[derive(Debug, Clone)]
-pub struct Declarations {
-    defvars: BTreeSet<DefinedVariable>,
-    vardecls: BTreeSet<UndefinedVariable>,
-    defuns: BTreeSet<DefinedFunction>,
-    funcdecls: BTreeSet<UndefinedFunction>,
-    constants: BTreeSet<Constant>,
-    defstructs: BTreeSet<StructNode>,
-    defunions: BTreeSet<UnionNode>,
-    typedefs: BTreeSet<TypedefNode>,
-}
-
-#[derive(Debug, Clone)]
-pub struct UndefinedVariable {
-    type_node: TypeNode,
+pub struct UndefinedVariable<'a> {
+    type_node: TypeNode<'a>,
     name: String,
     is_private: bool,
 }
 
 #[derive(Debug, Clone)]
-pub struct DefinedVariable {
-    type_node: TypeNode,
+pub struct DefinedVariable<'a> {
+    type_node: TypeNode<'a>,
     name: String,
     is_private: bool,
     initializer: ExprNode,
 }
 
 #[derive(Debug, Clone)]
-pub struct DefinedFunction {
-    type_node: TypeNode,
+pub struct DefinedFunction<'a> {
+    type_node: TypeNode<'a>,
     name: String,
     is_private: bool,
-    params: Params,
-    body: BlockNode,
+    params: Params<'a>,
+    body: BlockNode<'a>,
 }
 
 #[derive(Debug, Clone)]
-pub struct UndefinedFunction {
-    type_node: TypeNode,
+pub struct UndefinedFunction<'a> {
+    type_node: TypeNode<'a>,
     name: String,
     is_private: bool,
-    params: Params,
+    params: Params<'a>,
 }
 
 #[derive(Debug, Clone)]
-pub struct Constant {
-    type_node: TypeNode,
+pub struct Constant<'a> {
+    type_node: TypeNode<'a>,
     name: String,
     value: ExprNode,
 }
 
 #[derive(Debug, Clone)]
-pub struct StructNode {
-    location: Location,
-    type_ref: TypeRef,
+pub struct StructNode<'a> {
+    location: Location<'a>,
+    type_ref: TypeRef<'a>,
     name: String,
-    membs: Vec<Slot>,
+    membs: Vec<Slot<'a>>,
 }
 
 #[derive(Debug, Clone)]
-pub struct UnionNode {
-    location: Location,
-    type_ref: TypeRef,
+pub struct UnionNode<'a> {
+    location: Location<'a>,
+    type_ref: TypeRef<'a>,
     name: String,
-    membs: Vec<Slot>,
+    membs: Vec<Slot<'a>>,
 }
 
 #[derive(Debug,  Clone)]
-pub struct TypedefNode {
-    location: Location,
+pub struct TypedefNode<'a> {
+    location: Location<'a>,
     name: String,
-    real: TypeNode,
+    real: TypeNode<'a>,
 }
 
 
 #[derive(Debug, Clone)]
-pub struct TypeNode {
-    type_ref: TypeRef,
+pub struct TypeNode<'a> {
+    type_ref: TypeRef<'a>,
     self_type: Type,
 }
 
 #[derive(Debug,  Clone)]
-pub struct TypeRef {
-    location: Location,
+pub struct TypeRef<'a> {
+    location: Location<'a>,
 }
 
 #[derive(Debug,  Clone)]
@@ -114,33 +105,33 @@ pub struct ExprNode {
 }
 
 #[derive(Debug,  Clone)]
-pub struct Params {
-    location: Location,
-    param_descs: Vec<Parameter>,
+pub struct Params<'a> {
+    location: Location<'a>,
+    param_descs: Vec<Parameter<'a>>,
 }
 
 #[derive(Debug,  Clone)]
-pub struct BlockNode {
-    location: Location,
-    variables: Vec<DefinedVariable>,
-    stmts: Vec<StmtNode>,
+pub struct BlockNode<'a> {
+    location: Location<'a>,
+    variables: Vec<DefinedVariable<'a>>,
+    stmts: Vec<StmtNode<'a>>,
 }
 
 
 #[derive(Debug,  Clone)]
-pub struct Slot {
-    type_node: TypeNode,
+pub struct Slot<'a> {
+    type_node: TypeNode<'a>,
     name: String,
     offset: usize,
 }
 
 #[derive(Debug,  Clone)]
-pub struct Parameter {
-    type_node: TypeNode,
+pub struct Parameter<'a> {
+    type_node: TypeNode<'a>,
     name: String,
 }
 
 #[derive(Debug,  Clone)]
-pub struct StmtNode {
-    location: Location,
+pub struct StmtNode<'a> {
+    location: Location<'a>,
 }
