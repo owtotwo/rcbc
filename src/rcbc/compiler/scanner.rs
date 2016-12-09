@@ -1,10 +1,8 @@
-#![allow(unused_imports, unreachable_code)]
 use super::token::{Token, TokenKind};
 use super::location::Location;
 use std::result;
 use std::fmt;
 use std::str::Chars;
-use std::iter::Peekable;
 use std::path::Path;
 
 type Result<T> = result::Result<T, ScanError>;
@@ -32,7 +30,7 @@ pub enum ScanErrorKind {
     InvalidChar,
     NotClosingSingalquote,
     NotClosingDoublequote,
-    StrayChars,
+    Strays,
 }
 
 impl<'a> Scanner<'a> {
@@ -47,7 +45,6 @@ impl<'a> Scanner<'a> {
     }
 
     pub fn scan(&mut self) -> Result<Vec<Token>> {
-        // let mut tokens: Vec<Token> = Vec::new();
         self.lexical_analysis() ?;
         Ok(self.tokens.clone())
     }
@@ -441,6 +438,7 @@ impl<'a> Scanner<'a> {
 
         match_operator!("<<=", LeftShiftAssign);
         match_operator!(">>=", RightShiftAssign);
+        match_operator!("...", Ellipsis);
 
         match_operator!("==", DoubleEquals);
         match_operator!("!=", NotEqualTo);
@@ -495,7 +493,7 @@ impl<'a> Scanner<'a> {
 
         let stray = s.chars().next().unwrap();
         Err(ScanError::new(self.line, self.column,
-                           ScanErrorKind::StrayChars, Some(stray)))
+                           ScanErrorKind::Strays, Some(stray)))
     }
 
     fn step(&mut self, n: usize) -> String {
@@ -541,7 +539,7 @@ impl fmt::Display for ScanError {
                 write!(f, "need a closing single quote for the char"),
             ScanErrorKind::NotClosingDoublequote =>
                 write!(f, "need a closing double quote for a string"),
-            ScanErrorKind::StrayChars =>
+            ScanErrorKind::Strays =>
                 write!(f, "stray ‘{}’ in program", self.stray.unwrap()),
         }
     }

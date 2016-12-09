@@ -77,6 +77,10 @@ impl Compiler {
             return Ok(());
         }
 
+        let token_stream = token_stream.into_iter()
+                                       .filter(|x| !x.is_special())
+                                       .collect();
+
         let mut parser = Parser::new(&token_stream);
 
         let ast = parser.parse() ?;

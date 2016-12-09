@@ -3,7 +3,7 @@ use super::location::Location;
 
 #[derive(Debug, Clone)]
 pub struct Token<'a> {
-    kind: TokenKind,
+    pub kind: TokenKind,
     value: Option<String>, // semantic value
     location: Location<'a>,
 }
@@ -105,6 +105,7 @@ pub enum TokenKind {
     Arrow,                    // "->"
     LeftShiftAssign,          // "<<="
     RightShiftAssign,         // ">>="
+    Ellipsis,                 // "..."
     // End of file
     EOF,
 }
@@ -131,6 +132,17 @@ impl<'a> Token<'a> {
                     value: None,
                     location: location,
                 },
+        }
+    }
+
+    pub fn is_special(&self) -> bool {
+        match self.kind {
+            TokenKind::Space | 
+            TokenKind::BlockComment | 
+            TokenKind::LineComment =>
+                true,
+            _ =>
+                false,
         }
     }
 }
@@ -240,6 +252,7 @@ impl<'a> fmt::Display for Token<'a> {
             TokenKind::Arrow =>                   "`->`".fmt(f),
             TokenKind::LeftShiftAssign =>         "`<<=`".fmt(f),
             TokenKind::RightShiftAssign =>        "`>>=`".fmt(f),
+            TokenKind::Ellipsis =>                "`...`".fmt(f),
             // End of file
             TokenKind::EOF =>                     "<EOF>".fmt(f),
         }

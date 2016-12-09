@@ -1,23 +1,27 @@
 use super::location::Location;
-use std::collections::BTreeSet;
 
 #[derive(Debug, Clone)]
 pub struct AST<'a> {
-    source: Location<'a>,
     declarations: Declarations<'a>,
 }
 
 #[derive(Debug, Clone)]
 pub struct Declarations<'a> {
-    defvars: BTreeSet<DefinedVariable<'a>>,
-    vardecls: BTreeSet<UndefinedVariable<'a>>,
-    defuns: BTreeSet<DefinedFunction<'a>>,
-    funcdecls: BTreeSet<UndefinedFunction<'a>>,
-    constants: BTreeSet<Constant<'a>>,
-    defstructs: BTreeSet<StructNode<'a>>,
-    defunions: BTreeSet<UnionNode<'a>>,
-    typedefs: BTreeSet<TypedefNode<'a>>,
+    declarations: Vec<Declaration<'a>>,
 }
+
+#[derive(Debug, Clone)]
+pub enum Declaration<'a> {
+    VarDef(DefinedVariable<'a>),
+    VarDecl(UndefinedVariable<'a>),
+    FuncDef(DefinedFunction<'a>),
+    FuncDecl(UndefinedFunction<'a>),
+    Const(Constant<'a>),
+    StructDef(StructNode<'a>),
+    UnionDef(UnionNode<'a>),
+    TypeDef(TypedefNode<'a>),
+}
+
 
 #[derive(Debug, Clone)]
 pub struct UndefinedVariable<'a> {
@@ -134,4 +138,30 @@ pub struct Parameter<'a> {
 #[derive(Debug,  Clone)]
 pub struct StmtNode<'a> {
     location: Location<'a>,
+}
+
+
+
+impl<'a> AST<'a> {
+    pub fn new() -> AST<'a> {
+        AST {
+            declarations: Declarations::new(),
+        }
+    }
+
+    pub fn location(&self) -> &Location<'a> {
+        self.declarations.location()
+    }
+}
+
+impl<'a> Declarations<'a> {
+    pub fn new() -> Declarations<'a> {
+        Declarations {
+            declarations: Vec::new(),
+        }
+    }
+
+    pub fn location(&self) -> &Location<'a> {
+        unimplemented!()
+    }
 }
