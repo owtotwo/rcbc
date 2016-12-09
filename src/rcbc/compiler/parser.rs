@@ -34,6 +34,7 @@ pub enum ParseErrorKind {
     TypedefTerminal,
     LackOfArrayCloseBracket,
     LackOfCloseParentheses,
+    InvalidTyperefBase,
 }
 
 
@@ -385,7 +386,69 @@ impl<'a> Parser<'a> {
     }
 
     fn typeref_base(&mut self) -> Result<()> {
-        unimplemented!()
+        lookahead!(self.iter,
+            Void => {
+                eat!(self.iter);
+            },
+            Char => {
+                eat!(self.iter);
+            },
+            Short => {
+                eat!(self.iter);
+            },
+            Int => {
+                eat!(self.iter);
+            },
+            Long => {
+                eat!(self.iter);
+            },
+            Unsigned => {
+                eat!(self.iter); // <Unsigned>
+                lookahead!(self.iter,
+                    Char => {
+                        eat!(self.iter); // <Char>
+                    },
+                    Short => {
+                        eat!(self.iter); // <Short>
+                    },
+                    Int => {
+                        eat!(self.iter); // <Int>
+                    },
+                    Long => {
+                        eat!(self.iter); // <Long>
+                    }
+                    else { /* Just Unsigned */ }
+                );
+            },
+            Struct => {
+                eat!(self.iter);
+                lookahead!(self.iter, if Identifier {
+                    eat!(self.iter);
+                }, else {
+                    return Err(ParseError::new(
+                        ParseErrorKind::InvalidIdentifier));
+                });
+            },
+            Union => {
+                eat!(self.iter);
+                lookahead!(self.iter, if Identifier {
+                    eat!(self.iter);
+                }, else {
+                    return Err(ParseError::new(
+                        ParseErrorKind::InvalidIdentifier));
+                });
+            },
+            Identifier => {
+                eat!(self.iter); // p78?
+            }
+            else {
+                return Err(ParseError::new(
+                    ParseErrorKind::InvalidTyperefBase));
+            }
+        );
+
+        println!("Typeref Base Found!");
+        Ok(())
     }
 
     fn defvar_list(&mut self) -> Result<()> {
@@ -397,8 +460,30 @@ impl<'a> Parser<'a> {
     }
 
     fn param_typerefs(&mut self) -> Result<()> {
-        unimplemented!()
-    } 
+        lookahead!(self.iter, if Void {
+            lookahead!(self.iter, if CloseParentheses {
+                eat!(self.iter, 2); // <Void> and ')'
+                println!("Typedef parameters with no element Found!");
+                return Ok(());
+            });
+        });
+
+        self.typeref() ?;
+
+        lookahead!(self.iter, while Comma {
+            eat!(self.iter); // ','
+            lookahead!(self.iter, if Ellipsis {
+                eat!(self.iter);
+                println!("Variable typeref parameters Found!");
+                return Ok(());
+            }, else {
+                self.typeref() ?;
+            });
+        });
+
+        println!("Fixed typeref parameter list Found!");
+        Ok(())
+    }
 }
 
 
@@ -444,6 +529,8 @@ impl fmt::Display for ParseError {
                 "need a close bracket `]` in typeref".fmt(f),
             ParseErrorKind::LackOfCloseParentheses =>
                 "need a close parentheses `)`".fmt(f),
+            ParseErrorKind::InvalidTyperefBase =>
+                "need a valid typeref base part".fmt(f),
         }
     }
 }
