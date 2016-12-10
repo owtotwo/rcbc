@@ -55,6 +55,7 @@ pub enum ParseErrorKind {
     ExpectGotoLabel,
     GotoStatementTerminal,
     ReturnStatementTerminal,
+    ContinueStatementTerminal,
 }
 
 
@@ -620,7 +621,11 @@ impl<'a> Parser<'a> {
     }
 
     fn continue_stmt(&mut self) -> Result<()> {
-        unimplemented!()
+        expect!(self.iter, Continue);
+        expect!(self.iter, Semicolon else ContinueStatementTerminal);
+
+        println!("Continue statement Found!");
+        Ok(())
     }
 
     fn goto_stmt(&mut self) -> Result<()> {
@@ -832,6 +837,8 @@ impl fmt::Display for ParseError {
                 "need a semicolon after the goto statement".fmt(f),
             ParseErrorKind::ReturnStatementTerminal =>
                 "need a semicolon after the return statement".fmt(f),
+            ParseErrorKind::ContinueStatementTerminal =>
+                "need a semicolon after the continue statement".fmt(f),
         }
     }
 }
