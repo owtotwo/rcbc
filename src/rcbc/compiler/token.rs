@@ -2,10 +2,10 @@ use std::fmt;
 use super::location::Location;
 
 #[derive(Debug, Clone)]
-pub struct Token<'a> {
+pub struct Token {
     pub kind: TokenKind,
     value: Option<String>, // semantic value
-    location: Location<'a>,
+    location: Location,
 }
 
 #[derive(Debug, Clone)]
@@ -110,9 +110,9 @@ pub enum TokenKind {
     EOF,
 }
 
-impl<'a> Token<'a> {
+impl Token {
     pub fn new(kind: TokenKind, value: Option<String>,
-            location: Location<'a>) -> Token<'a> {
+            location: Location) -> Token {
         match kind {
             TokenKind::Integer 
           | TokenKind::String 
@@ -147,7 +147,7 @@ impl<'a> Token<'a> {
     }
 }
 
-impl<'a> fmt::Display for Token<'a> {
+impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.kind {
             TokenKind::Identifier => 

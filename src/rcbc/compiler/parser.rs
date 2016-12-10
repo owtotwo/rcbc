@@ -1,5 +1,5 @@
 use super::token::{Token, TokenKind};
-use super::ast::*;
+use super::ast::AST;
 use std::result;
 use std::fmt;
 use std::slice::Iter;
@@ -8,8 +8,8 @@ type Result<'a, T> = result::Result<T, ParseError>;
 
 #[derive(Debug, Clone)]
 pub struct Parser<'a> {
-    iter: Iter<'a, Token<'a>>,
-    ast: AST<'a>,
+    iter: Iter<'a, Token>,
+    ast: AST,
 }
 
 #[derive(Debug)]

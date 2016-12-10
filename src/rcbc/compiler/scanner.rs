@@ -12,7 +12,7 @@ pub struct Scanner<'a> {
     iter: Chars<'a>,
     line: usize,
     column: usize,
-    tokens: Vec<Token<'a>>,
+    tokens: Vec<Token>,
 }
 
 #[derive(Debug)]
@@ -74,8 +74,8 @@ impl<'a> Scanner<'a> {
                     self.scan_integer(),
                 Some(ref c) => self.scan_operator(),
                 None => {
-                    let location = Location::new(self.file, self.line,
-                        self.column, self.line, self.column);
+                    let location = Location::new(self.line, self.column,
+                                                 self.line, self.column);
                     self.tokens.push(Token::new(TokenKind::EOF, None,
                                                 location));
                     break;
@@ -102,8 +102,7 @@ impl<'a> Scanner<'a> {
             }
         };
 
-        let location = Location::new(self.file, ln, col,
-            self.line, self.column);
+        let location = Location::new(ln, col, self.line, self.column);
         self.tokens.push(Token::new(TokenKind::Space, Some(content),
                                     location));
 
@@ -125,8 +124,8 @@ impl<'a> Scanner<'a> {
                     if scout.clone().next() == Some('/') {
                         let (ln, col) = (self.line, self.column);
                         let comments = self.step(move_count + 1);
-                        let location = Location::new(self.file, ln, col,
-                                                     self.line, self.column);
+                        let location = Location::new(ln, col, self.line,
+                                                     self.column);
                         self.tokens.push(Token::new(TokenKind::BlockComment,
                             Some(comments), location));
                         return Ok(())
@@ -147,8 +146,7 @@ impl<'a> Scanner<'a> {
         if let Some(pos) = scout.position(|c| c == '\n') {
             let (ln, col) = (self.line, self.column);
             let comment = self.step(pos + 1);
-            let location = Location::new(self.file, ln, col,
-                                         self.line, self.column);
+            let location = Location::new(ln, col, self.line, self.column);
             self.tokens.push(Token::new(TokenKind::LineComment, Some(comment),
                                         location));
         }
@@ -168,8 +166,8 @@ impl<'a> Scanner<'a> {
                                  c.unwrap() != '_' => {
                             let (ln, col) = (self.line, self.column);
                             self.step($Kw_str.len());
-                            let location = Location::new(self.file, ln, col,
-                                self.line, self.column);
+                            let location = Location::new(ln, col, self.line,
+                                                         self.column);
                             self.tokens.push(Token::new(TokenKind::$Kw_kind,
                                                         None, location));
                             return Ok(());
@@ -223,8 +221,7 @@ impl<'a> Scanner<'a> {
             Some(pos) => {
                 let (ln, col) = (self.line, self.column);
                 let identifier = self.step(pos);
-                let location = Location::new(self.file, ln, col,
-                                             self.line, self.column);
+                let location = Location::new(ln, col, self.line, self.column);
                 self.tokens.push(Token::new(TokenKind::Identifier,
                                             Some(identifier), location));
             },
@@ -232,8 +229,7 @@ impl<'a> Scanner<'a> {
                 let identifier = self.iter.as_str().to_string();
                 let (ln, col) = (self.line, self.column);
                 self.step(identifier.len()); // eat all chars
-                let location = Location::new(self.file, ln, col,
-                                             self.line, self.column);
+                let location = Location::new(ln, col, self.line, self.column);
                 self.tokens.push(Token::new(TokenKind::Identifier,
                     Some(identifier), location));
             }
@@ -272,8 +268,7 @@ impl<'a> Scanner<'a> {
 
         let (ln, col) = (self.line, self.column);
         let integer = self.step(move_count);
-        let location = Location::new(self.file, ln, col,
-                                     self.line, self.column);
+        let location = Location::new(ln, col, self.line, self.column);
         self.tokens.push(Token::new(TokenKind::Integer, Some(integer),
                                     location));
 
@@ -358,8 +353,7 @@ impl<'a> Scanner<'a> {
             Some('\'') => {
                 let (ln, col) = (self.line, self.column);
                 let character = self.step(move_count);
-                let location = Location::new(self.file, ln, col,
-                                             self.line, self.column);
+                let location = Location::new(ln, col, self.line, self.column);
                 self.tokens.push(Token::new(TokenKind::Character, 
                     Some(character), location));
             },
@@ -382,8 +376,7 @@ impl<'a> Scanner<'a> {
                 move_count += 1;
                 let (ln, col) = (self.line, self.column);
                 let string = self.step(move_count);
-                let location = Location::new(self.file, ln, col,
-                                             self.line, self.column);
+                let location = Location::new(ln, col, self.line, self.column);
                 self.tokens.push(Token::new(TokenKind::String, Some(string),
                                             location));
                 return Ok(());
@@ -427,8 +420,7 @@ impl<'a> Scanner<'a> {
                 if s.starts_with($Kw_str) {
                     let (ln, col) = (self.line, self.column);
                     self.step($Kw_str.len());
-                    let location = Location::new(self.file, ln, col,
-                                                 self.line, self.column);
+                    let location = Location::new(ln, col, self.line, self.column);
                     self.tokens.push(Token::new(TokenKind::$Kw_kind, None,
                                                 location));                    
                     return Ok(())

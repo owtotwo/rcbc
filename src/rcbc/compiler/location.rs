@@ -1,20 +1,15 @@
-use std::path::Path;
-
 #[derive(Debug, Clone)]
-pub struct Location<'a> {
-    file: &'a Path,
+pub struct Location {
     begin_line: usize,
     begin_column: usize,
     end_line: usize,
     end_column: usize,
 }
 
-impl<'a> Location<'a> {
-    pub fn new(file: &'a Path, begin_line: usize,
-               begin_column: usize, end_line: usize, 
-               end_column: usize) -> Location<'a> {
+impl Location {
+    pub fn new(begin_line: usize, begin_column: usize, end_line: usize, 
+               end_column: usize) -> Location {
         Location {
-            file: file,
             begin_line: begin_line,
             begin_column: begin_column,
             end_line: end_line,
