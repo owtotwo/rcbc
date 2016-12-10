@@ -35,6 +35,14 @@ pub enum ParseErrorKind {
     LackOfArrayCloseBracket,
     LackOfCloseParentheses,
     InvalidTyperefBase,
+    ExpressionTerminal,
+    LackOfLeftBracketBeforeIfCond,
+    LackOfRightBracketAfterIfCond,
+    LackOfLeftBracketBeforeWhileCond,
+    LackOfRightBracketAfterWhileCond,
+    LackOfLeftBracketBeforeForCond,
+    LackOfRightBracketAfterForCond,
+    ForExpressionSeparator,
 }
 
 
@@ -456,6 +464,140 @@ impl<'a> Parser<'a> {
     }
 
     fn stmts(&mut self) -> Result<()> {
+        loop {
+            lookahead!(self.iter, if RightCurlyBracket { break; });
+            self.stmt() ?;
+        }
+        
+        println!("Statements Found!");
+        Ok(())
+    }
+
+    fn stmt(&mut self) -> Result<()> {
+        lookahead!(self.iter,
+            Semicolon => {
+                eat!(self.iter);
+            },
+            LeftCurlyBracket => { // block
+                self.block() ?;
+            },
+            If => {
+                self.if_stmt() ?;
+            },
+            While => {
+                self.while_stmt() ?;
+            },
+            Do => {
+                self.dowhile_stmt() ?;
+            },
+            For => {
+                self.for_stmt() ?;
+            },
+            Switch => {
+                self.switch_stmt() ?;
+            },
+            Break => {
+                self.break_stmt() ?;
+            },
+            Continue => {
+                self.continue_stmt() ?;
+            },
+            Goto => {
+                self.goto_stmt() ?;
+            },
+            Return => {
+                self.return_stmt() ?;
+            },
+            Identifier => {
+                lookahead!(self.iter, 2, if Colon {
+                    self.labeled_stmt() ?;
+                }, else {
+                    self.expr() ?;
+                    expect!(self.iter, Semicolon else ExpressionTerminal);
+                });
+            }
+            else {
+                self.expr() ?;
+                expect!(self.iter, Semicolon else ExpressionTerminal);
+            }
+        );
+
+        println!("Statment Found!");
+        Ok(())
+    }
+
+    fn if_stmt(&mut self) -> Result<()> {
+        expect!(self.iter, If);
+        expect!(self.iter, OpenParentheses else LackOfLeftBracketBeforeIfCond);
+        self.expr() ?;
+        expect!(self.iter, CloseParentheses else LackOfRightBracketAfterIfCond);
+        self.stmt() ?;
+        lookahead!(self.iter, if Else {
+            eat!(self.iter);
+            self.stmt() ?;
+        });
+
+        println!("If statement Found!");
+        Ok(())
+    }
+
+    fn while_stmt(&mut self) -> Result<()> {
+        expect!(self.iter, While);
+        expect!(self.iter, OpenParentheses else LackOfLeftBracketBeforeWhileCond);
+        self.expr() ?;
+        expect!(self.iter, CloseParentheses else LackOfRightBracketAfterWhileCond);
+        self.stmt() ?;
+        
+        println!("While statement Found!");
+        Ok(())
+    }
+
+    fn dowhile_stmt(&mut self) -> Result<()> {
+        unimplemented!()
+    }
+
+    fn for_stmt(&mut self) -> Result<()> {
+        expect!(self.iter, For);
+        expect!(self.iter, OpenParentheses else LackOfLeftBracketBeforeForCond);
+        lookahead!(self.iter, if Semicolon { /* do nothing */ }, else {
+            self.expr() ?;
+        });
+        expect!(self.iter, Semicolon else ForExpressionSeparator);
+        lookahead!(self.iter, if Semicolon { /* do nothing */ }, else {
+            self.expr() ?;
+        });
+        expect!(self.iter, Semicolon else ForExpressionSeparator);
+        lookahead!(self.iter, if CloseParentheses { /* do nothing */ }, else {
+            self.expr() ?;
+        });
+        expect!(self.iter, CloseParentheses else LackOfRightBracketAfterForCond);
+        self.stmt() ?;
+
+        println!("For statement Found!");
+        Ok(())
+    }
+
+    fn switch_stmt(&mut self) -> Result<()> {
+        unimplemented!()
+    }
+
+    fn break_stmt(&mut self) -> Result<()> {
+        unimplemented!()
+    }
+
+    fn continue_stmt(&mut self) -> Result<()> {
+        unimplemented!()
+    }
+
+    fn goto_stmt(&mut self) -> Result<()> {
+        unimplemented!()
+    }
+
+    fn return_stmt(&mut self) -> Result<()> {
+        unimplemented!()
+    }
+
+    fn labeled_stmt(&mut self) -> Result<()> {
         unimplemented!()
     }
 
@@ -531,6 +673,23 @@ impl fmt::Display for ParseError {
                 "need a close parentheses `)`".fmt(f),
             ParseErrorKind::InvalidTyperefBase =>
                 "need a valid typeref base part".fmt(f),
+            ParseErrorKind::ExpressionTerminal =>
+                "need a semicolon after the expression statement".fmt(f),
+            ParseErrorKind::LackOfLeftBracketBeforeIfCond =>
+                "need a open parentheses before the `if` condition".fmt(f),
+            ParseErrorKind::LackOfRightBracketAfterIfCond =>
+                "need a close parentheses after the `if` condition".fmt(f),
+            ParseErrorKind::LackOfLeftBracketBeforeWhileCond =>
+                "need a open parentheses before the `while` condition".fmt(f),
+            ParseErrorKind::LackOfRightBracketAfterWhileCond =>
+                "need a close parentheses after the `while` condition".fmt(f),
+            ParseErrorKind::LackOfLeftBracketBeforeForCond =>
+                "need a open parentheses before the `for` condition".fmt(f),
+            ParseErrorKind::LackOfRightBracketAfterForCond =>
+                "need a close parentheses after the `for` condition".fmt(f),
+            ParseErrorKind::ForExpressionSeparator =>
+                "need a semicolon as the separator between \
+                 expressions in `for` statement".fmt(f),
         }
     }
 }
