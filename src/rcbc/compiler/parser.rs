@@ -14,7 +14,7 @@ pub struct Parser<'a> {
 
 #[derive(Debug)]
 pub struct ParseError {
-    kind: ParseErrorKind,
+    pub kind: ParseErrorKind,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -57,6 +57,11 @@ pub enum ParseErrorKind {
     ReturnStatementTerminal,
     ContinueStatementTerminal,
     ExpectTernaryColon,
+    ExpectCastRightBracket,
+    ArrayReferenceTerminal,
+    FunctionCallArgsTerminal,
+    ExpectPrimaryRightBracket,
+    InvalidPrimary,
 }
 
 
@@ -618,7 +623,166 @@ impl<'a> Parser<'a> {
     }
 
     fn term(&mut self) -> Result<()> {
-        unimplemented!()
+        lookahead!(self.iter, if OpenParentheses {
+            eat!(self.iter);
+            match self.type_() { // just try
+                Ok(_) => {
+                    expect!(self.iter, CloseParentheses else
+                        ExpectCastRightBracket);
+                    self.term() ?;
+                    println!("Casting Term Found!");
+                    Ok(())
+                },
+                Err(ParseError { kind: ParseErrorKind::InvalidTyperefBase })
+                        => {
+                    self.unary(true) ?;
+                    println!("Unary Term Found!");
+                    Ok(())
+                },
+                Err(e) => {
+                    Err(e) // real error
+                }
+            }
+        }, else {
+            self.unary(false) ?;
+            println!("Unary Term Found!");
+            Ok(())
+        })
+    }
+
+    fn unary(&mut self, has_ate_left_bracket: bool) -> Result<()> {
+        if has_ate_left_bracket {
+            self.postfix(has_ate_left_bracket) ?;
+            println!("Unary Found!");
+            return Ok(());
+        }
+
+        lookahead!(self.iter,
+            Increment => {
+                eat!(self.iter);
+                self.unary(false) ?;
+            },
+            Decrement => {
+                eat!(self.iter);
+                self.unary(false) ?;
+            },
+            Plus => {
+                eat!(self.iter);
+                self.term() ?;
+            },
+            Hyphen => {
+                eat!(self.iter);
+                self.term() ?;
+            },
+            ExclamationMark => {
+                eat!(self.iter);
+                self.term() ?;
+            },
+            Tilde => {
+                eat!(self.iter);
+                self.term() ?;
+            },
+            Asterisk => {
+                eat!(self.iter);
+                self.term() ?;
+            },
+            Ampersand => {
+                eat!(self.iter);
+                self.term() ?;
+            },
+            Sizeof => {
+                eat!(self.iter);
+                lookahead!(self.iter, if OpenParentheses {
+                    eat!(self.iter);
+                    match self.type_() { // just try
+                        Ok(_type) => {
+                            expect!(self.iter, CloseParentheses else
+                                ExpectCastRightBracket);
+                            println!("Sizeof(type) Found!");
+                            return Ok(());
+                        },
+                        Err(ParseError { kind: 
+                                ParseErrorKind::InvalidTyperefBase }) => {
+                            self.unary(true) ?;
+                            println!("Sizeof expression Found!");
+                            return Ok(());
+                        },
+                        Err(e) => {
+                            return Err(e); // real error
+                        }
+                    };
+                }, else {
+                    self.unary(false) ?;
+                    println!("Sizeof expression Found!");
+                    return Ok(());
+                });
+            }
+            else {
+                self.postfix(false) ?;
+            }
+        );
+
+        println!("Unary Found!");
+        Ok(())
+    }
+
+    fn postfix(&mut self, has_ate_left_bracket: bool) -> Result<()> {
+        self.primary(has_ate_left_bracket) ?;
+        loop {
+            lookahead!(self.iter,
+                Increment => {
+                    eat!(self.iter);
+                },
+                Decrement => {
+                    eat!(self.iter);
+                },
+                OpeningBracket => {
+                    eat!(self.iter);
+                    self.expr() ?;
+                    expect!(self.iter, ClosingBracket else
+                        ArrayReferenceTerminal);
+                    // println!("Array reference postfix Found!");
+                    // return Ok(());
+                },
+                Dot => {
+                    eat!(self.iter);
+                    self.name() ?;
+                    // println!("Structure or Union member reference postfix Found!");
+                    // return Ok(());
+                },
+                Arrow => {
+                    eat!(self.iter);
+                    self.name() ?;
+                    // println!("Reference by pointer postfix Found!");
+                    // return Ok(());
+                },
+                OpenParentheses => {
+                    eat!(self.iter);
+                    self.args() ?;
+                    expect!(self.iter, CloseParentheses else
+                        FunctionCallArgsTerminal);
+                    // println!("Function call postfix Found!");
+                    // return Ok(());
+                }
+                else { break; }
+            );
+        }
+
+        println!("postfix Found!");
+        Ok(())
+    }
+
+    fn args(&mut self) -> Result<()> {
+        lookahead!(self.iter, if CloseParentheses { /* Empty args */ }, else {
+            self.expr() ?;
+            lookahead!(self.iter, while Comma {
+                eat!(self.iter);
+                self.expr() ?;
+            });
+        });
+
+        println!("Args Found!");
+        Ok(())
     }
 
     fn param(&mut self) -> Result<()> {
@@ -963,7 +1127,7 @@ impl<'a> Parser<'a> {
 
     fn cases(&mut self) -> Result<()> {
         expect!(self.iter, Case);
-        self.primary() ?;
+        self.primary(false) ?;
         expect!(self.iter, Colon else ExpectCaseColon);
 
         println!("Cases Found!");
@@ -1011,8 +1175,32 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    fn primary(&mut self) -> Result<()> {
-        unimplemented!()
+    fn primary(&mut self, has_ate_left_bracket: bool) -> Result<()> {
+        lookahead!(self.iter,
+            Integer => {
+                eat!(self.iter);
+            },
+            Character => {
+                eat!(self.iter);                
+            },
+            String => {
+                eat!(self.iter);
+            },
+            Identifier => {
+                eat!(self.iter);
+            },
+            OpenParentheses => {
+                self.expr() ?;
+                expect!(self.iter, CloseParentheses else
+                    ExpectPrimaryRightBracket);
+            }
+            else {
+                return Err(ParseError::new(ParseErrorKind::InvalidPrimary));
+            }
+        );
+
+        println!("Primary Found!");
+        Ok(())
     }
 }
 
@@ -1107,7 +1295,19 @@ impl fmt::Display for ParseError {
             ParseErrorKind::ContinueStatementTerminal =>
                 "need a semicolon after the continue statement".fmt(f),
             ParseErrorKind::ExpectTernaryColon =>
-                "need a colon between the expressions in ternary expression".fmt(f),
+                "need a colon between the expressions in ternary \
+                 expression".fmt(f),
+            ParseErrorKind::ExpectCastRightBracket =>
+                "need a close parentheses for the cast type".fmt(f),
+            ParseErrorKind::ArrayReferenceTerminal =>
+                "need a close bracket `]` in array reference".fmt(f),
+            ParseErrorKind::FunctionCallArgsTerminal =>
+                "need a close parentheses after the function call \
+                 argument list".fmt(f),
+            ParseErrorKind::ExpectPrimaryRightBracket =>
+                "need a close parentheses after the expression".fmt(f),
+            ParseErrorKind::InvalidPrimary => // what?
+                "need a valid primary".fmt(f),
         }
     }
 }
