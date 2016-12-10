@@ -9,7 +9,6 @@ type Result<'a, T> = result::Result<T, ParseError>;
 #[derive(Debug, Clone)]
 pub struct Parser<'a> {
     iter: Iter<'a, Token>,
-    ast: AST,
 }
 
 #[derive(Debug)]
@@ -144,13 +143,13 @@ impl<'a> Parser<'a> {
     pub fn new(token_stream: &'a Vec<Token>) -> Parser<'a> {
         Parser {
             iter: token_stream.iter(),
-            ast: AST::new(),
         }
     }
 
     pub fn parse(&mut self) -> Result<AST> {
+        let location = self.iter.clone().next().unwrap().location().clone();
         self.syntax_analysis() ?;
-        Ok(self.ast.clone())
+        Ok(AST::new(location))
     }
 
     fn syntax_analysis(&mut self) -> Result<()> {

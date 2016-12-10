@@ -145,6 +145,10 @@ impl Token {
                 false,
         }
     }
+
+    pub fn location(&self) -> &Location {
+        &self.location
+    }
 }
 
 impl fmt::Display for Token {

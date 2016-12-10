@@ -1,13 +1,27 @@
-// use super::location::Location;
+use super::location::Location;
+
+trait Node {
+    fn location(&self) -> &Location;
+}
+
 
 #[derive(Debug, Clone)]
 pub struct AST {
+    location: Location,
     // declarations: Declarations,
 }
 
 impl AST {
-    pub fn new() -> AST {
-        AST {}
+    pub fn new(location: Location) -> AST {
+        AST {
+            location: location,
+        }
+    }
+}
+
+impl Node for AST {
+    fn location(&self) -> &Location {
+        &self.location
     }
 }
 
