@@ -43,6 +43,18 @@ pub enum ParseErrorKind {
     LackOfLeftBracketBeforeForCond,
     LackOfRightBracketAfterForCond,
     ForExpressionSeparator,
+    LackOfLabel,
+    ExpectWhileinDoWhile,
+    DoWhileTerminal,
+    LackOfLeftBracketBeforeSwitchCond,
+    LackOfRightBracketAfterSwitchCond,
+    LackOfLeftBracketBeforeCaseClause,
+    LackOfRightBracketAfterCaseClause,
+    BreakStatementTerminal,
+    ExpectCaseColon,
+    ExpectGotoLabel,
+    GotoStatementTerminal,
+    ReturnStatementTerminal,
 }
 
 
@@ -553,7 +565,16 @@ impl<'a> Parser<'a> {
     }
 
     fn dowhile_stmt(&mut self) -> Result<()> {
-        unimplemented!()
+        expect!(self.iter, Do);
+        self.stmt() ?;
+        expect!(self.iter, While else ExpectWhileinDoWhile);
+        expect!(self.iter, OpenParentheses else LackOfLeftBracketBeforeWhileCond);
+        self.expr() ?;
+        expect!(self.iter, CloseParentheses else LackOfRightBracketAfterWhileCond);
+        expect!(self.iter, Semicolon else DoWhileTerminal);
+
+        println!("Do-While statement Found!");
+        Ok(())
     }
 
     fn for_stmt(&mut self) -> Result<()> {
@@ -578,11 +599,24 @@ impl<'a> Parser<'a> {
     }
 
     fn switch_stmt(&mut self) -> Result<()> {
-        unimplemented!()
+        expect!(self.iter, Switch);
+        expect!(self.iter, OpenParentheses else LackOfLeftBracketBeforeSwitchCond);
+        self.expr() ?;
+        expect!(self.iter, CloseParentheses else LackOfRightBracketAfterSwitchCond);
+        expect!(self.iter, LeftCurlyBracket else LackOfLeftBracketBeforeCaseClause);
+        self.case_clauses() ?;
+        expect!(self.iter, RightCurlyBracket else LackOfRightBracketAfterCaseClause);
+
+        println!("Switch statement Found!");
+        Ok(())
     }
 
     fn break_stmt(&mut self) -> Result<()> {
-        unimplemented!()
+        expect!(self.iter, Break);
+        expect!(self.iter, Semicolon else BreakStatementTerminal);
+
+        println!("Break statement Found!");
+        Ok(())
     }
 
     fn continue_stmt(&mut self) -> Result<()> {
@@ -590,15 +624,93 @@ impl<'a> Parser<'a> {
     }
 
     fn goto_stmt(&mut self) -> Result<()> {
-        unimplemented!()
+        expect!(self.iter, Goto);
+        lookahead!(self.iter, if Identifier {
+            eat!(self.iter);
+        }, else {
+            return Err(ParseError::new(ParseErrorKind::ExpectGotoLabel));
+        });
+        expect!(self.iter, Semicolon else GotoStatementTerminal);
+
+        println!("Goto statement Found!");
+        Ok(())
     }
 
     fn return_stmt(&mut self) -> Result<()> {
-        unimplemented!()
+        expect!(self.iter, Return);
+        lookahead!(self.iter, if Semicolon { /* no return value */ }, else {
+            // have return value
+            self.expr() ?;
+        });
+        expect!(self.iter, Semicolon else ReturnStatementTerminal);
+
+        println!("Return statement Found!");
+        Ok(())
     }
 
     fn labeled_stmt(&mut self) -> Result<()> {
-        unimplemented!()
+        lookahead!(self.iter, if Identifier {
+            eat!(self.iter);
+        }, else {
+            return Err(ParseError::new(ParseErrorKind::LackOfLabel));
+        });
+        expect!(self.iter, Colon);
+        self.stmt() ?;
+
+        println!("Labeled statement Found!");
+        Ok(())
+    }
+
+    fn case_clauses(&mut self) -> Result<()> {
+        lookahead!(self.iter, while Case {
+            self.case_clause() ?;
+        });
+
+        lookahead!(self.iter, if Default {
+            self.default_clause() ?;
+        });
+
+        println!("Case clauses Found!");
+        Ok(())
+    }
+
+    fn case_clause(&mut self) -> Result<()> {
+        self.cases() ?;
+        self.case_body() ?;
+
+        println!("Case clause Found!");
+        Ok(())
+    }
+
+    fn default_clause(&mut self) -> Result<()> {
+        expect!(self.iter, Default);
+        self.case_body() ?;
+        println!("Default clause Found!");
+        Ok(())
+    }
+
+    fn cases(&mut self) -> Result<()> {
+        expect!(self.iter, Case);
+        self.primary() ?;
+        expect!(self.iter, Colon else ExpectCaseColon);
+
+        println!("Cases Found!");
+        Ok(())
+    }
+
+    fn case_body(&mut self) -> Result<()> {
+        loop {
+            self.stmt() ?;
+            lookahead!(self.iter,
+                Case => { break; },
+                Default => { break; },
+                RightCurlyBracket => { break; }
+                else { /* continue to get the stmt */ }
+            );
+        }
+
+        println!("Case body Found!");
+        Ok(())
     }
 
     fn param_typerefs(&mut self) -> Result<()> {
@@ -625,6 +737,10 @@ impl<'a> Parser<'a> {
 
         println!("Fixed typeref parameter list Found!");
         Ok(())
+    }
+
+    fn primary(&mut self) -> Result<()> {
+        unimplemented!()
     }
 }
 
@@ -690,6 +806,32 @@ impl fmt::Display for ParseError {
             ParseErrorKind::ForExpressionSeparator =>
                 "need a semicolon as the separator between \
                  expressions in `for` statement".fmt(f),
+            ParseErrorKind::LackOfLabel =>
+                "need a identifier as a label in labeled statment".fmt(f),
+            ParseErrorKind::ExpectWhileinDoWhile =>
+                "need the `while` in do-while statement".fmt(f),
+            ParseErrorKind::DoWhileTerminal =>
+                "need a semicolon after the do-while statement".fmt(f),
+            ParseErrorKind::LackOfLeftBracketBeforeSwitchCond =>
+                "need a open parentheses before the `switch` condition".fmt(f),
+            ParseErrorKind::LackOfRightBracketAfterSwitchCond =>
+                "need a close parentheses after the `switch` condition".fmt(f),
+            ParseErrorKind::LackOfLeftBracketBeforeCaseClause =>
+                "need a left curly bracket before case clauses \
+                 in `switch` statement".fmt(f),
+            ParseErrorKind::LackOfRightBracketAfterCaseClause =>
+                "need a right curly bracket after case clauses \
+                 in `switch` statement".fmt(f),
+            ParseErrorKind::BreakStatementTerminal =>
+                "need a semicolon after the break statement".fmt(f),
+            ParseErrorKind::ExpectCaseColon =>
+                "need a colon after the case value".fmt(f),
+            ParseErrorKind::ExpectGotoLabel =>
+                "need a label after the `goto` keyword".fmt(f),
+            ParseErrorKind::GotoStatementTerminal =>
+                "need a semicolon after the goto statement".fmt(f),
+            ParseErrorKind::ReturnStatementTerminal =>
+                "need a semicolon after the return statement".fmt(f),
         }
     }
 }
