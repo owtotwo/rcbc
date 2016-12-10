@@ -56,6 +56,7 @@ pub enum ParseErrorKind {
     GotoStatementTerminal,
     ReturnStatementTerminal,
     ContinueStatementTerminal,
+    ExpectTernaryColon,
 }
 
 
@@ -351,6 +352,272 @@ impl<'a> Parser<'a> {
     }
 
     fn expr(&mut self) -> Result<()> {
+        let term = self.term() ?;
+        lookahead!(self.iter,
+            Equals => {
+                eat!(self.iter);
+                self.expr() ?;
+
+                println!("Assignment statement Found!");
+                Ok(())
+            },
+            AddAssign => {
+                eat!(self.iter);
+                self.expr() ?;
+
+                println!("Add assignment statement Found!");
+                Ok(())
+            },
+            SubtractAssign => {
+                eat!(self.iter);
+                self.expr() ?;
+
+                println!("Subtract assignment statement Found!");
+                Ok(())
+            },
+            MultiplyAssign => {
+                eat!(self.iter);
+                self.expr() ?;
+
+                println!("Multiply assignment statement Found!");
+                Ok(())
+            },
+            DivideAssign => {
+                eat!(self.iter);
+                self.expr() ?;
+
+                println!("Divide assignment statement Found!");
+                Ok(())
+            },
+            ModuloAssign => {
+                eat!(self.iter);
+                self.expr() ?;
+
+                println!("Modulo assignment statement Found!");
+                Ok(())
+            },
+            AndAssign => {
+                eat!(self.iter);
+                self.expr() ?;
+
+                println!("And assignment statement Found!");
+                Ok(())
+            },
+            ExclusiveOrAssign => {
+                eat!(self.iter);
+                self.expr() ?;
+
+                println!("ExclusiveOr assignment statement Found!");
+                Ok(())
+            },
+            OrAssign => {
+                eat!(self.iter);
+                self.expr() ?;
+
+                println!("Or assignment statement Found!");
+                Ok(())
+            },
+            LeftShiftAssign => {
+                eat!(self.iter);
+                self.expr() ?;
+
+                println!("LeftShift assignment statement Found!");
+                Ok(())
+            },
+            RightShiftAssign => {
+                eat!(self.iter);
+                self.expr() ?;
+
+                println!("RightShift assignment statement Found!");
+                Ok(())
+            }
+            else {
+                self.expr_10(Some(term)) ?;
+
+                println!("Expression Found!");
+                Ok(())
+            }
+        )
+    }
+
+    fn expr_10(&mut self, term: Option<()>) -> Result<()> {
+        self.expr_9(term) ?;
+
+        lookahead!(self.iter, if QuestionMark {
+            self.expr() ?;
+            expect!(self.iter, Colon else ExpectTernaryColon);
+            self.expr_10(None) ?;
+        });
+
+        println!("Ternary expression Found!");
+        Ok(())
+    }
+
+    fn expr_9(&mut self, term: Option<()>) -> Result<()> {
+        self.expr_8(term) ?;
+
+        lookahead!(self.iter, while LogicalOr {
+            eat!(self.iter);
+            self.expr_8(None) ?;
+        });
+
+        println!("Logical Or expression Found!");
+        Ok(())
+    }
+
+    fn expr_8(&mut self, term: Option<()>) -> Result<()> {
+        self.expr_7(term) ?;
+
+        lookahead!(self.iter, while LogicalAnd {
+            eat!(self.iter);
+            self.expr_7(None) ?;
+        });
+
+        println!("Logical And expression Found!");
+        Ok(())
+    }
+
+    fn expr_7(&mut self, term: Option<()>) -> Result<()> {
+        self.expr_6(term) ?;
+
+        loop {
+            lookahead!(self.iter, 
+                GreaterThan => {
+                    eat!(self.iter);
+                    self.expr_6(None) ?;
+                },
+                LessThan => {
+                    eat!(self.iter);
+                    self.expr_6(None) ?;
+                },
+                DoubleEquals => {
+                    eat!(self.iter);
+                    self.expr_6(None) ?;
+                },
+                NotEqualTo => {
+                    eat!(self.iter);
+                    self.expr_6(None) ?;
+                },
+                LessThanOrEqualTo => {
+                    eat!(self.iter);
+                    self.expr_6(None) ?;
+                },
+                GreaterThanOrEqualTo => {
+                    eat!(self.iter);
+                    self.expr_6(None) ?;
+                }
+                else { break; }
+            );
+        }
+
+        println!("Comparation expression Found!");
+        Ok(())
+    }
+
+    fn expr_6(&mut self, term: Option<()>) -> Result<()> {
+        self.expr_5(term) ?;
+
+        lookahead!(self.iter, while VerticalBar {
+            eat!(self.iter);
+            self.expr_5(None) ?;
+        });
+
+        println!("Bitwise Or expression Found!");
+        Ok(())
+    }
+
+    fn expr_5(&mut self, term: Option<()>) -> Result<()> {
+        self.expr_4(term) ?;
+
+        lookahead!(self.iter, while Caret {
+            eat!(self.iter);
+            self.expr_4(None) ?;
+        });
+
+        println!("Bitwise Exclusive Or expression Found!");
+        Ok(())
+    }
+
+    fn expr_4(&mut self, term: Option<()>) -> Result<()> {
+        self.expr_3(term) ?;
+
+        lookahead!(self.iter, while Ampersand {
+            eat!(self.iter);
+            self.expr_3(None) ?;
+        });
+
+        println!("Bitwise And expression Found!");
+        Ok(())
+    }
+
+    fn expr_3(&mut self, term: Option<()>) -> Result<()> {
+        self.expr_2(term) ?;
+
+        loop {
+            lookahead!(self.iter,
+                LeftShift => {
+                    eat!(self.iter);
+                    self.expr_2(None) ?;
+                },
+                RightShift => {
+                    eat!(self.iter);
+                    self.expr_2(None) ?;
+                }
+                else { break; }
+            );
+        }
+
+        println!("Bitwise Shift expression Found!");
+        Ok(())
+    }
+
+    fn expr_2(&mut self, term: Option<()>) -> Result<()> {
+        self.expr_1(term) ?;
+
+        loop {
+            lookahead!(self.iter,
+                Plus => {
+                    eat!(self.iter);
+                    self.expr_1(None) ?;
+                },
+                Hyphen => {
+                    eat!(self.iter);
+                    self.expr_1(None) ?;
+                }
+                else { break; }
+            );
+        }
+
+        println!("Plus/Minus expression Found!");
+        Ok(())
+    }
+
+    fn expr_1(&mut self, term: Option<()>) -> Result<()> {
+        let term = if term.is_some() { term.unwrap() } else { self.term() ? };
+
+        loop {
+            lookahead!(self.iter,
+                Asterisk => {
+                    eat!(self.iter);
+                    self.term() ?;
+                },
+                Slash => {
+                    eat!(self.iter);
+                    self.term() ?;
+                },
+                Procenttecken => {
+                    eat!(self.iter);
+                    self.term() ?;
+                }
+                else { break; }
+            );
+        }
+
+        println!("Mul/Div/Mod expression Found!");
+        Ok(())
+    }
+
+    fn term(&mut self) -> Result<()> {
         unimplemented!()
     }
 
@@ -839,6 +1106,8 @@ impl fmt::Display for ParseError {
                 "need a semicolon after the return statement".fmt(f),
             ParseErrorKind::ContinueStatementTerminal =>
                 "need a semicolon after the continue statement".fmt(f),
+            ParseErrorKind::ExpectTernaryColon =>
+                "need a colon between the expressions in ternary expression".fmt(f),
         }
     }
 }
