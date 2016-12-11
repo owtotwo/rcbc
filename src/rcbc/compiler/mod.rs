@@ -18,6 +18,7 @@ mod scanner;
 mod token;
 mod parser;
 mod ast;
+mod type_;
 
 const COMPILER_NAME:    &'static str = "rcbc";
 const COMPILER_VERSION: &'static str = "0.0.1";

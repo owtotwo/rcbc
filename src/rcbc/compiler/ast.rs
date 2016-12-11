@@ -59,6 +59,20 @@ pub struct BinaryOpNode {
 
 impl_node_location!(BinaryOpNode);
 
+impl BinaryOpNode {
+    fn new(left: Box<ExprNode>, op: String, right: Box<ExprNode>) -> BinaryOpNode {
+        BinaryOpNode {
+            location: Location {
+                begin: left.location().clone().begin,
+                end: right.location().clone().end,
+            },
+            left: left,
+            operator: op,
+            right: right,
+        }
+    }    
+}
+
 pub struct LogicalAndNode {
     // ...
 }
