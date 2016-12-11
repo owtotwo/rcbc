@@ -1,7 +1,226 @@
 use super::location::Location;
 
+const INDENT_STRING: &'static str = "    ";
+
 trait Node {
     fn location(&self) -> &Location;
+    fn dump(&self, indent_level: usize);
+}
+
+macro_rules! impl_node_location {
+    ($T: ty) => (
+        impl Node for $T {
+            fn location(&self) -> &Location {
+                &self.location
+            }
+            fn dump(&self, indent_level: usize) {
+                let indents: Vec<&'static str> = (0..indent_level)
+                                                    .map(|_| INDENT_STRING)
+                                                    .collect();
+                let indent: String = indents.concat();
+                println!("{}{}", indent, "<Content...>");
+            }
+        }
+    )
+}
+
+
+trait ExprNode: Node {
+    // ...
+}
+
+trait AssignNodeTrait: ExprNode {
+    // ...
+}
+
+pub struct AssignNode {
+    // ...
+}
+
+pub struct OpAssignNode {
+    // ...
+}
+
+pub struct AddressNode {
+    // ...
+}
+
+trait BinaryOpTrait: ExprNode {
+    // ...
+}
+
+pub struct BinaryOpNode {
+    location: Location,
+    operator: String,
+    left: Box<ExprNode>,
+    right: Box<ExprNode>,
+    // type_: Box<Type>,
+}
+
+impl_node_location!(BinaryOpNode);
+
+pub struct LogicalAndNode {
+    // ...
+}
+
+pub struct LogicalOrNode {
+    // ...
+}
+
+pub struct CastNode {
+    // ...
+}
+
+pub struct CondExprNode {
+    // ...
+}
+
+pub struct FuncallNode {
+    // ...
+}
+
+trait LHSNode: ExprNode {
+    // ...
+}
+
+pub struct ArefNode {
+    // ...
+}
+
+pub struct DereferenceNode {
+    // ...
+}
+
+pub struct MemberNode {
+    // ...
+}
+
+pub struct PtrMemberNode {
+    // ...
+}
+
+pub struct VariableNode {
+    // ...
+}
+
+trait LiteralNode: ExprNode {
+    // ...
+}
+
+pub struct IntegerLiteralNode {
+    // ...
+}
+
+pub struct StringLiteralNode {
+    // ...
+}
+
+pub struct SizeofExprNode {
+    // ...
+}
+
+pub struct SizeofTypeNode {
+    // ...
+}
+
+trait UnaryOpNode: ExprNode {
+    // ...
+}
+
+trait UnaryArithmeticOpNode: UnaryOpNode {
+    // ...
+}
+
+pub struct PrefixOpNode {
+    // ...
+}
+
+pub struct SuffixOpNode {
+    // ...
+}
+
+pub struct Slot {
+    // ...
+}
+
+trait StmtNode: Node {
+    // ...
+}
+
+pub struct BlockNode {
+    // ...
+}
+
+pub struct BreakNode {
+    // ...
+}
+
+pub struct CaseNode {
+    // ...
+}
+
+pub struct ContinueNode {
+    // ...
+}
+
+pub struct DoWhileNode {
+    // ...
+}
+
+pub struct ExprStmtNode {
+    // ...
+}
+
+pub struct ForNode {
+    // ...
+}
+
+pub struct GotoNode {
+    // ...
+}
+
+pub struct IfNode {
+    // ...
+}
+
+pub struct LabelNode {
+    // ...
+}
+
+pub struct ReturnNode {
+    // ...
+}
+
+pub struct SwitchNode {
+    // ...
+}
+
+pub struct WhileNode {
+    // ...
+}
+
+trait TypeDefinition: Node {
+    // ...
+}
+
+trait CompositeTypeDefinition: TypeDefinition {
+    // ...
+}
+
+pub struct StructNode {
+    // ...
+}
+
+pub struct UnionNode {
+    // ...
+}
+
+trait TypedefNode: TypeDefinition {
+    // ...
+}
+
+pub struct TypeNode {
+    // ...
 }
 
 
@@ -22,6 +241,10 @@ impl AST {
 impl Node for AST {
     fn location(&self) -> &Location {
         &self.location
+    }
+
+    fn dump(&self, indent_level: usize) {
+
     }
 }
 
