@@ -190,8 +190,13 @@ impl<'a> Parser<'a> {
                 }, else {
                     self.defun_or_defvars()
                 })
+            },
+            Typedef => {
+                self.typedef()
             }
-            else { unimplemented!() }
+            else {
+                self.defun_or_defvars()
+            }
         )
     }
 
@@ -201,7 +206,7 @@ impl<'a> Parser<'a> {
             // do someting...
         });
 
-        self.typedef() ?;
+        self.typeref() ?;
 
         self.name() ?;
 
@@ -903,7 +908,41 @@ impl<'a> Parser<'a> {
     }
 
     fn defvar_list(&mut self) -> Result<()> {
-        unimplemented!()
+        loop {
+            lookahead!(self.iter, if Static {
+                eat!(self.iter);
+                // do someting...
+            });
+
+            match self.typeref() {
+                Ok(_) => { /* is variable definition list */ },
+                Err(ParseError { kind: ParseErrorKind::InvalidTyperefBase }) => {
+                    break;
+                },
+                Err(e) => { return Err(e); } 
+            };
+
+            self.name() ?;
+
+            lookahead!(self.iter, if Equals {
+                eat!(self.iter);
+                self.expr() ?;
+            });
+
+            lookahead!(self.iter, while Comma {
+                eat!(self.iter);
+                self.name() ?;
+                lookahead!(self.iter, if Equals {
+                    eat!(self.iter);
+                    self.expr() ?;
+                });
+            });
+
+            expect!(self.iter, Semicolon else VarDefTerminal);
+        }
+
+        println!("Variables Definition in function Found!");
+        Ok(())
     }
 
     fn stmts(&mut self) -> Result<()> {
