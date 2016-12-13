@@ -362,6 +362,7 @@ impl<'a> Parser<'a> {
 
     fn expr(&mut self) -> Result<()> {
         let term = self.term() ?;
+        
         lookahead!(self.iter,
             Equals => {
                 eat!(self.iter);
@@ -458,7 +459,6 @@ impl<'a> Parser<'a> {
             self.expr_10(None) ?;
         });
 
-        println!("Ternary expression Found!");
         Ok(())
     }
 
@@ -470,7 +470,6 @@ impl<'a> Parser<'a> {
             self.expr_8(None) ?;
         });
 
-        println!("Logical Or expression Found!");
         Ok(())
     }
 
@@ -482,7 +481,6 @@ impl<'a> Parser<'a> {
             self.expr_7(None) ?;
         });
 
-        println!("Logical And expression Found!");
         Ok(())
     }
 
@@ -519,7 +517,6 @@ impl<'a> Parser<'a> {
             );
         }
 
-        println!("Comparation expression Found!");
         Ok(())
     }
 
@@ -531,7 +528,6 @@ impl<'a> Parser<'a> {
             self.expr_5(None) ?;
         });
 
-        println!("Bitwise Or expression Found!");
         Ok(())
     }
 
@@ -543,7 +539,6 @@ impl<'a> Parser<'a> {
             self.expr_4(None) ?;
         });
 
-        println!("Bitwise Exclusive Or expression Found!");
         Ok(())
     }
 
@@ -555,7 +550,6 @@ impl<'a> Parser<'a> {
             self.expr_3(None) ?;
         });
 
-        println!("Bitwise And expression Found!");
         Ok(())
     }
 
@@ -576,7 +570,6 @@ impl<'a> Parser<'a> {
             );
         }
 
-        println!("Bitwise Shift expression Found!");
         Ok(())
     }
 
@@ -597,7 +590,6 @@ impl<'a> Parser<'a> {
             );
         }
 
-        println!("Plus/Minus expression Found!");
         Ok(())
     }
 
@@ -622,7 +614,6 @@ impl<'a> Parser<'a> {
             );
         }
 
-        println!("Mul/Div/Mod expression Found!");
         Ok(())
     }
 
@@ -792,14 +783,14 @@ impl<'a> Parser<'a> {
     fn param(&mut self) -> Result<()> {
         self.type_() ?;
         self.name() ?;
-        println!("A Parameter Found");
+        println!("A Parameter Found!");
         Ok(())
     }
 
     // crash the keyword `type`, so type_
     fn type_(&mut self) -> Result<()> {
         self.typeref() ?;
-        println!("Type Found");
+        println!("Type Found!");
         Ok(())
     }
 
@@ -895,6 +886,10 @@ impl<'a> Parser<'a> {
                 });
             },
             Identifier => {
+                if !self.is_type(self.iter.clone().next().unwrap().image()) {
+                    return Err(ParseError::new(
+                        ParseErrorKind::InvalidTyperefBase));
+                }
                 eat!(self.iter); // p78?
             }
             else {
@@ -1214,31 +1209,42 @@ impl<'a> Parser<'a> {
     }
 
     fn primary(&mut self, has_ate_left_bracket: bool) -> Result<()> {
-        lookahead!(self.iter,
-            Integer => {
-                eat!(self.iter);
-            },
-            Character => {
-                eat!(self.iter);                
-            },
-            String => {
-                eat!(self.iter);
-            },
-            Identifier => {
-                eat!(self.iter);
-            },
-            OpenParentheses => {
-                self.expr() ?;
-                expect!(self.iter, CloseParentheses else
-                    ExpectPrimaryRightBracket);
-            }
-            else {
-                return Err(ParseError::new(ParseErrorKind::InvalidPrimary));
-            }
-        );
+        if has_ate_left_bracket {
+            self.expr() ?;
+            expect!(self.iter, CloseParentheses else
+                ExpectPrimaryRightBracket);
+        } else {
+            lookahead!(self.iter,
+                Integer => {
+                    eat!(self.iter);
+                },
+                Character => {
+                    eat!(self.iter);                
+                },
+                String => {
+                    eat!(self.iter);
+                },
+                Identifier => {
+                    eat!(self.iter);
+                },
+                OpenParentheses => {
+                    eat!(self.iter);
+                    self.expr() ?;
+                    expect!(self.iter, CloseParentheses else
+                        ExpectPrimaryRightBracket);
+                }
+                else {
+                    return Err(ParseError::new(ParseErrorKind::InvalidPrimary));
+                }
+            );
+        }
 
         println!("Primary Found!");
         Ok(())
+    }
+
+    fn is_type(&self, name: String) -> bool {
+        false // unimplemented!()
     }
 }
 

@@ -496,7 +496,7 @@ impl<'a> Scanner<'a> {
                     content.push(*c);
                     if *c == '\n' {
                         self.line += 1;
-                        self.column = 0;
+                        self.column = 1;
                     } else {
                         self.column += 1;
                     }

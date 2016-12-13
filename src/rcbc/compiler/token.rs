@@ -149,6 +149,10 @@ impl Token {
     pub fn location(&self) -> &Location {
         &self.location
     }
+
+    pub fn image(&self) -> String {
+        self.value.clone().unwrap()
+    }
 }
 
 impl fmt::Display for Token {
