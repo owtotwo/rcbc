@@ -1,4 +1,5 @@
 use super::location::Location;
+use super::type_::*;
 
 const INDENT_STRING: &'static str = "    ";
 
@@ -114,7 +115,9 @@ pub struct PtrMemberNode {
 }
 
 pub struct VariableNode {
-    // ...
+    location: Location,
+    name: String,
+    // entity: Entity,
 }
 
 trait LiteralNode: ExprNode {
@@ -122,7 +125,9 @@ trait LiteralNode: ExprNode {
 }
 
 pub struct IntegerLiteralNode {
-    // ...
+    location: Location,
+    type_node: Box<TypeNode>,
+    value: i64,
 }
 
 pub struct StringLiteralNode {
@@ -233,8 +238,9 @@ trait TypedefNode: TypeDefinition {
     // ...
 }
 
-pub struct TypeNode {
-    // ...
+pub enum TypeNode {
+    Type(Box<Type>),
+    TypeRef(Box<TypeRef>),
 }
 
 
@@ -259,6 +265,22 @@ impl Node for AST {
 
     fn dump(&self, indent_level: usize) {
 
+    }
+}
+
+impl IntegerLiteralNode {
+    fn new(loc: Location, typeref: Box<TypeRef>, val: i64) -> IntegerLiteralNode {
+        IntegerLiteralNode {
+            location: loc,
+            type_node: Box::new(TypeNode::new(typeref)),
+            value: val,
+        }
+    }
+}
+
+impl TypeNode {
+    fn new(typeref: Box<TypeRef>) -> TypeNode {
+        TypeNode::TypeRef(typeref)
     }
 }
 
@@ -422,3 +444,30 @@ impl Node for AST {
 //         unimplemented!()
 //     }
 // }
+
+fn integer_node(loc: Location, val: String) -> IntegerLiteralNode {
+    let i: i64 = integer_value(val.clone());
+    if val.ends_with("UL") {
+        IntegerLiteralNode::new(loc, Box::new(IntegerTypeRef::ulong_ref(loc)), i)
+    } else if val.ends_with("L") {
+        IntegerLiteralNode::new(loc, Box::new(IntegerTypeRef::long_ref(loc)), i)
+    } else if val.ends_with("U") {
+        IntegerLiteralNode::new(loc, Box::new(IntegerTypeRef::uint_ref(loc)), i)
+    } else {
+        IntegerLiteralNode::new(loc, Box::new(IntegerTypeRef::int_ref(loc)), i)
+    }
+}
+
+fn integer_value(val: String) -> i64 {
+    val.replace("U", "").replace("L", "").parse::<i64>().unwrap()
+}
+
+fn character_code(val: String) -> i64 {
+    let mut s = string_value(val);
+    assert!(s.len() == 1);
+    s.pop().unwrap() as i64
+}
+
+fn string_value(val: String) -> String {
+    unimplemented!()
+}

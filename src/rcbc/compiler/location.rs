@@ -1,10 +1,10 @@
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Location {
     pub begin: Position,
     pub end: Position,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Position {
     pub line: usize,
     pub column: usize,
