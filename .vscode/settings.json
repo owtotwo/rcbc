@@ -1,0 +1,30 @@
+// Place your settings in this file to overwrite default and user settings.
+{
+    "files.trimTrailingWhitespace": true,
+    "editor.formatOnSave": true,
+    "editor.rulers": [
+        90
+    ],
+    "editor.useTabStops": true,
+    "files.exclude": {
+        "**/.git": true,
+        "**/.DS_Store": true,
+        "target/": true,
+        "**/.gitignore": true,
+        "Cargo.lock": true,
+        ".vscode/": true,
+        ".rls.toml": true
+    },
+    "files.associations": {
+        "*.cb": "c"
+    },
+    "rust.rls": {
+        "executable": "rustup",
+        "args": [
+            "run",
+            "nightly",
+            "rls"
+        ],
+        "revealOutputChannelOn": "never"
+    }
+}

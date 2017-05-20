@@ -1,5 +1,7 @@
 use super::token::{Token, TokenKind};
-use super::ast::AST;
+use super::ast::*;
+use super::type_::*;
+use super::location::Location;
 use std::result;
 use std::fmt;
 use std::slice::Iter;
@@ -9,6 +11,7 @@ type Result<'a, T> = result::Result<T, ParseError>;
 #[derive(Debug, Clone)]
 pub struct Parser<'a> {
     iter: Iter<'a, Token>,
+    ast: AST,
 }
 
 #[derive(Debug)]
@@ -139,17 +142,21 @@ macro_rules! lookahead {
 }
 
 impl<'a> Parser<'a> {
-    
     pub fn new(token_stream: &'a Vec<Token>) -> Parser<'a> {
+        let location = token_stream
+            .iter()
+            .next()
+            .map(|x| x.location())
+            .unwrap_or(Location::default());
         Parser {
             iter: token_stream.iter(),
+            ast: AST::new(location),
         }
     }
 
     pub fn parse(&mut self) -> Result<AST> {
-        let location = self.iter.clone().next().unwrap().location().clone();
-        self.syntax_analysis() ?;
-        Ok(AST::new(location))
+        self.syntax_analysis()?;
+        Ok(self.ast.clone())
     }
 
     fn syntax_analysis(&mut self) -> Result<()> {
@@ -157,15 +164,18 @@ impl<'a> Parser<'a> {
     }
 
     fn compilation_unit(&mut self) -> Result<()> {
-        self.import_stmts() ?;
-        self.top_defs() ?;
+        self.import_stmts()?;
+        self.top_defs()?;
         self.eof()
     }
 
     fn import_stmts(&mut self) -> Result<()> {
         // let _stmts = Vec::new();
 
-        lookahead!(self.iter, while Import { self.import_stmt() ?; });
+        lookahead!(self.iter,
+                   while Import {
+                       self.import_stmt()?;
+                   });
 
         println!("Import Statements Finished!");
 
@@ -173,7 +183,7 @@ impl<'a> Parser<'a> {
     }
 
     fn top_defs(&mut self) -> Result<()> {
-        lookahead!(self.iter, 
+        lookahead!(self.iter,
             Static => {
                 self.defun_or_defvars()
             },
@@ -201,14 +211,15 @@ impl<'a> Parser<'a> {
     }
 
     fn defun_or_defvars(&mut self) -> Result<()> {
-        lookahead!(self.iter, if Static {
-            eat!(self.iter);
-            // do someting...
-        });
+        lookahead!(self.iter,
+                   if Static {
+                       eat!(self.iter);
+                       // do someting...
+                   });
 
-        self.typeref() ?;
+        self.typeref()?;
 
-        self.name() ?;
+        self.name()?;
 
         lookahead!(self.iter, if OpenParentheses {
             eat!(self.iter);
@@ -239,8 +250,8 @@ impl<'a> Parser<'a> {
     fn defstruct(&mut self) -> Result<()> {
         expect!(self.iter, Struct);
 
-        self.name() ?;
-        self.member_list() ?;
+        self.name()?;
+        self.member_list()?;
 
         expect!(self.iter, Semicolon else StructDefinitionTermial);
 
@@ -251,8 +262,8 @@ impl<'a> Parser<'a> {
     fn defunion(&mut self) -> Result<()> {
         expect!(self.iter, Union);
 
-        self.name() ?;
-        self.member_list() ?;
+        self.name()?;
+        self.member_list()?;
 
         expect!(self.iter, Semicolon else UnionDefinitionTermial);
 
@@ -264,11 +275,14 @@ impl<'a> Parser<'a> {
         expect!(self.iter, LeftCurlyBracket else LackOfMemberListLeftBracket);
 
         loop {
-            lookahead!(self.iter, if RightCurlyBracket { break; });
-            self.slot() ?;
+            lookahead!(self.iter,
+                       if RightCurlyBracket {
+                           break;
+                       });
+            self.slot()?;
             expect!(self.iter, Semicolon else LackOfSlotTerminal);
         }
-        
+
         expect!(self.iter, RightCurlyBracket else LackOfMemberListRightBracket);
 
         println!("Member List Found!");
@@ -276,8 +290,8 @@ impl<'a> Parser<'a> {
     }
 
     fn slot(&mut self) -> Result<()> {
-        self.type_() ?;
-        self.name() ?;
+        self.type_()?;
+        self.name()?;
 
         println!("Slot Found!");
         Ok(())
@@ -286,8 +300,8 @@ impl<'a> Parser<'a> {
     fn typedef(&mut self) -> Result<()> {
         expect!(self.iter, Typedef else ExpectTypedef);
 
-        self.typeref() ?;
-        self.name() ?; // Or Identifier?
+        self.typeref()?;
+        self.name()?; // Or Identifier?
 
         expect!(self.iter, Semicolon else TypedefTerminal);
 
@@ -301,13 +315,14 @@ impl<'a> Parser<'a> {
 
     fn import_stmt(&mut self) -> Result<()> {
         eat!(self.iter); // <Import>
-        
-        self.name() ?;
 
-        lookahead!(self.iter, while Dot {
-            eat!(self.iter); // <Dot>
-            self.name() ?;
-        });
+        self.name()?;
+
+        lookahead!(self.iter,
+                   while Dot {
+                       eat!(self.iter); // <Dot>
+                       self.name()?;
+                   });
 
         expect!(self.iter, Semicolon else ImportTerminalSign);
         println!("Import Statement Found!");
@@ -326,26 +341,29 @@ impl<'a> Parser<'a> {
     }
 
     fn params(&mut self) -> Result<()> {
-        lookahead!(self.iter, if Void {
-            lookahead!(self.iter, if CloseParentheses {
-                eat!(self.iter, 2); // <Void> and ')'
-                println!("Parameters with no element Found!");
-                return Ok(());
-            });
-        });
+        lookahead!(self.iter,
+                   if Void {
+                       lookahead!(self.iter,
+                                  if CloseParentheses {
+                                      eat!(self.iter, 2); // <Void> and ')'
+                                      println!("Parameters with no element Found!");
+                                      return Ok(());
+                                  });
+                   });
 
-        self.param() ?;
+        self.param()?;
 
-        lookahead!(self.iter, while Comma {
-            eat!(self.iter); // ','
-            lookahead!(self.iter, if Ellipsis {
+        lookahead!(self.iter,
+                   while Comma {
+                       eat!(self.iter); // ','
+                       lookahead!(self.iter, if Ellipsis {
                 eat!(self.iter);
                 println!("Variable parameter Found!");
                 return Ok(());
             }, else {
                 self.param() ?;
             });
-        });
+                   });
 
         println!("Fixed parameter list Found!");
         Ok(())
@@ -353,16 +371,16 @@ impl<'a> Parser<'a> {
 
     fn block(&mut self) -> Result<()> {
         expect!(self.iter, LeftCurlyBracket else LackOfBlockLeftBracket);
-        self.defvar_list() ?;
-        self.stmts() ?;
+        self.defvar_list()?;
+        self.stmts()?;
         expect!(self.iter, RightCurlyBracket else LackOfBlockRightBracket);
         println!("Block Found!");
         Ok(())
     }
 
     fn expr(&mut self) -> Result<()> {
-        let term = self.term() ?;
-        
+        let term = self.term()?;
+
         lookahead!(self.iter,
             Equals => {
                 eat!(self.iter);
@@ -451,44 +469,47 @@ impl<'a> Parser<'a> {
     }
 
     fn expr_10(&mut self, term: Option<()>) -> Result<()> {
-        self.expr_9(term) ?;
+        self.expr_9(term)?;
 
-        lookahead!(self.iter, if QuestionMark {
-            self.expr() ?;
-            expect!(self.iter, Colon else ExpectTernaryColon);
-            self.expr_10(None) ?;
-        });
+        lookahead!(self.iter,
+                   if QuestionMark {
+                       self.expr()?;
+                       expect!(self.iter, Colon else ExpectTernaryColon);
+                       self.expr_10(None)?;
+                   });
 
         Ok(())
     }
 
     fn expr_9(&mut self, term: Option<()>) -> Result<()> {
-        self.expr_8(term) ?;
+        self.expr_8(term)?;
 
-        lookahead!(self.iter, while LogicalOr {
-            eat!(self.iter);
-            self.expr_8(None) ?;
-        });
+        lookahead!(self.iter,
+                   while LogicalOr {
+                       eat!(self.iter);
+                       self.expr_8(None)?;
+                   });
 
         Ok(())
     }
 
     fn expr_8(&mut self, term: Option<()>) -> Result<()> {
-        self.expr_7(term) ?;
+        self.expr_7(term)?;
 
-        lookahead!(self.iter, while LogicalAnd {
-            eat!(self.iter);
-            self.expr_7(None) ?;
-        });
+        lookahead!(self.iter,
+                   while LogicalAnd {
+                       eat!(self.iter);
+                       self.expr_7(None)?;
+                   });
 
         Ok(())
     }
 
     fn expr_7(&mut self, term: Option<()>) -> Result<()> {
-        self.expr_6(term) ?;
+        self.expr_6(term)?;
 
         loop {
-            lookahead!(self.iter, 
+            lookahead!(self.iter,
                 GreaterThan => {
                     eat!(self.iter);
                     self.expr_6(None) ?;
@@ -521,40 +542,43 @@ impl<'a> Parser<'a> {
     }
 
     fn expr_6(&mut self, term: Option<()>) -> Result<()> {
-        self.expr_5(term) ?;
+        self.expr_5(term)?;
 
-        lookahead!(self.iter, while VerticalBar {
-            eat!(self.iter);
-            self.expr_5(None) ?;
-        });
+        lookahead!(self.iter,
+                   while VerticalBar {
+                       eat!(self.iter);
+                       self.expr_5(None)?;
+                   });
 
         Ok(())
     }
 
     fn expr_5(&mut self, term: Option<()>) -> Result<()> {
-        self.expr_4(term) ?;
+        self.expr_4(term)?;
 
-        lookahead!(self.iter, while Caret {
-            eat!(self.iter);
-            self.expr_4(None) ?;
-        });
+        lookahead!(self.iter,
+                   while Caret {
+                       eat!(self.iter);
+                       self.expr_4(None)?;
+                   });
 
         Ok(())
     }
 
     fn expr_4(&mut self, term: Option<()>) -> Result<()> {
-        self.expr_3(term) ?;
+        self.expr_3(term)?;
 
-        lookahead!(self.iter, while Ampersand {
-            eat!(self.iter);
-            self.expr_3(None) ?;
-        });
+        lookahead!(self.iter,
+                   while Ampersand {
+                       eat!(self.iter);
+                       self.expr_3(None)?;
+                   });
 
         Ok(())
     }
 
     fn expr_3(&mut self, term: Option<()>) -> Result<()> {
-        self.expr_2(term) ?;
+        self.expr_2(term)?;
 
         loop {
             lookahead!(self.iter,
@@ -574,7 +598,7 @@ impl<'a> Parser<'a> {
     }
 
     fn expr_2(&mut self, term: Option<()>) -> Result<()> {
-        self.expr_1(term) ?;
+        self.expr_1(term)?;
 
         loop {
             lookahead!(self.iter,
@@ -594,7 +618,11 @@ impl<'a> Parser<'a> {
     }
 
     fn expr_1(&mut self, term: Option<()>) -> Result<()> {
-        let term = if term.is_some() { term.unwrap() } else { self.term() ? };
+        let term = if term.is_some() {
+            term.unwrap()
+        } else {
+            self.term()?
+        };
 
         loop {
             lookahead!(self.iter,
@@ -647,7 +675,7 @@ impl<'a> Parser<'a> {
 
     fn unary(&mut self, has_ate_left_bracket: bool) -> Result<()> {
         if has_ate_left_bracket {
-            self.postfix(has_ate_left_bracket) ?;
+            self.postfix(has_ate_left_bracket)?;
             println!("Unary Found!");
             return Ok(());
         }
@@ -696,7 +724,7 @@ impl<'a> Parser<'a> {
                             println!("Sizeof(type) Found!");
                             return Ok(());
                         },
-                        Err(ParseError { kind: 
+                        Err(ParseError { kind:
                                 ParseErrorKind::InvalidTyperefBase }) => {
                             self.unary(true) ?;
                             println!("Sizeof expression Found!");
@@ -722,7 +750,7 @@ impl<'a> Parser<'a> {
     }
 
     fn postfix(&mut self, has_ate_left_bracket: bool) -> Result<()> {
-        self.primary(has_ate_left_bracket) ?;
+        self.primary(has_ate_left_bracket)?;
         loop {
             lookahead!(self.iter,
                 Increment => {
@@ -781,21 +809,21 @@ impl<'a> Parser<'a> {
     }
 
     fn param(&mut self) -> Result<()> {
-        self.type_() ?;
-        self.name() ?;
+        self.type_()?;
+        self.name()?;
         println!("A Parameter Found!");
         Ok(())
     }
 
     // crash the keyword `type`, so type_
     fn type_(&mut self) -> Result<()> {
-        self.typeref() ?;
+        self.typeref()?;
         println!("Type Found!");
         Ok(())
     }
 
     fn typeref(&mut self) -> Result<()> {
-        self.typeref_base() ?;
+        self.typeref_base()?;
         loop {
             lookahead!(self.iter,
                 ClosingBracket => {
@@ -821,7 +849,7 @@ impl<'a> Parser<'a> {
                 },
                 OpenParentheses => {
                     self.param_typerefs() ?;
-                    expect!(self.iter, CloseParentheses else 
+                    expect!(self.iter, CloseParentheses else
                         LackOfCloseParentheses);
                 }
                 else { break; }
@@ -904,34 +932,40 @@ impl<'a> Parser<'a> {
 
     fn defvar_list(&mut self) -> Result<()> {
         loop {
-            lookahead!(self.iter, if Static {
-                eat!(self.iter);
-                // do someting...
-            });
+            lookahead!(self.iter,
+                       if Static {
+                           eat!(self.iter);
+                           // do someting...
+                       });
 
             match self.typeref() {
-                Ok(_) => { /* is variable definition list */ },
+                Ok(_) => { /* is variable definition list */ }
                 Err(ParseError { kind: ParseErrorKind::InvalidTyperefBase }) => {
                     break;
-                },
-                Err(e) => { return Err(e); } 
+                }
+                Err(e) => {
+                    return Err(e);
+                }
             };
 
-            self.name() ?;
+            self.name()?;
 
-            lookahead!(self.iter, if Equals {
-                eat!(self.iter);
-                self.expr() ?;
-            });
+            lookahead!(self.iter,
+                       if Equals {
+                           eat!(self.iter);
+                           self.expr()?;
+                       });
 
-            lookahead!(self.iter, while Comma {
-                eat!(self.iter);
-                self.name() ?;
-                lookahead!(self.iter, if Equals {
-                    eat!(self.iter);
-                    self.expr() ?;
-                });
-            });
+            lookahead!(self.iter,
+                       while Comma {
+                           eat!(self.iter);
+                           self.name()?;
+                           lookahead!(self.iter,
+                                      if Equals {
+                                          eat!(self.iter);
+                                          self.expr()?;
+                                      });
+                       });
 
             expect!(self.iter, Semicolon else VarDefTerminal);
         }
@@ -942,10 +976,13 @@ impl<'a> Parser<'a> {
 
     fn stmts(&mut self) -> Result<()> {
         loop {
-            lookahead!(self.iter, if RightCurlyBracket { break; });
-            self.stmt() ?;
+            lookahead!(self.iter,
+                       if RightCurlyBracket {
+                           break;
+                       });
+            self.stmt()?;
         }
-        
+
         println!("Statements Found!");
         Ok(())
     }
@@ -1006,13 +1043,14 @@ impl<'a> Parser<'a> {
     fn if_stmt(&mut self) -> Result<()> {
         expect!(self.iter, If);
         expect!(self.iter, OpenParentheses else LackOfLeftBracketBeforeIfCond);
-        self.expr() ?;
+        self.expr()?;
         expect!(self.iter, CloseParentheses else LackOfRightBracketAfterIfCond);
-        self.stmt() ?;
-        lookahead!(self.iter, if Else {
-            eat!(self.iter);
-            self.stmt() ?;
-        });
+        self.stmt()?;
+        lookahead!(self.iter,
+                   if Else {
+                       eat!(self.iter);
+                       self.stmt()?;
+                   });
 
         println!("If statement Found!");
         Ok(())
@@ -1021,20 +1059,20 @@ impl<'a> Parser<'a> {
     fn while_stmt(&mut self) -> Result<()> {
         expect!(self.iter, While);
         expect!(self.iter, OpenParentheses else LackOfLeftBracketBeforeWhileCond);
-        self.expr() ?;
+        self.expr()?;
         expect!(self.iter, CloseParentheses else LackOfRightBracketAfterWhileCond);
-        self.stmt() ?;
-        
+        self.stmt()?;
+
         println!("While statement Found!");
         Ok(())
     }
 
     fn dowhile_stmt(&mut self) -> Result<()> {
         expect!(self.iter, Do);
-        self.stmt() ?;
+        self.stmt()?;
         expect!(self.iter, While else ExpectWhileinDoWhile);
         expect!(self.iter, OpenParentheses else LackOfLeftBracketBeforeWhileCond);
-        self.expr() ?;
+        self.expr()?;
         expect!(self.iter, CloseParentheses else LackOfRightBracketAfterWhileCond);
         expect!(self.iter, Semicolon else DoWhileTerminal);
 
@@ -1057,7 +1095,7 @@ impl<'a> Parser<'a> {
             self.expr() ?;
         });
         expect!(self.iter, CloseParentheses else LackOfRightBracketAfterForCond);
-        self.stmt() ?;
+        self.stmt()?;
 
         println!("For statement Found!");
         Ok(())
@@ -1066,10 +1104,10 @@ impl<'a> Parser<'a> {
     fn switch_stmt(&mut self) -> Result<()> {
         expect!(self.iter, Switch);
         expect!(self.iter, OpenParentheses else LackOfLeftBracketBeforeSwitchCond);
-        self.expr() ?;
+        self.expr()?;
         expect!(self.iter, CloseParentheses else LackOfRightBracketAfterSwitchCond);
         expect!(self.iter, LeftCurlyBracket else LackOfLeftBracketBeforeCaseClause);
-        self.case_clauses() ?;
+        self.case_clauses()?;
         expect!(self.iter, RightCurlyBracket else LackOfRightBracketAfterCaseClause);
 
         println!("Switch statement Found!");
@@ -1124,28 +1162,30 @@ impl<'a> Parser<'a> {
             return Err(ParseError::new(ParseErrorKind::LackOfLabel));
         });
         expect!(self.iter, Colon);
-        self.stmt() ?;
+        self.stmt()?;
 
         println!("Labeled statement Found!");
         Ok(())
     }
 
     fn case_clauses(&mut self) -> Result<()> {
-        lookahead!(self.iter, while Case {
-            self.case_clause() ?;
-        });
+        lookahead!(self.iter,
+                   while Case {
+                       self.case_clause()?;
+                   });
 
-        lookahead!(self.iter, if Default {
-            self.default_clause() ?;
-        });
+        lookahead!(self.iter,
+                   if Default {
+                       self.default_clause()?;
+                   });
 
         println!("Case clauses Found!");
         Ok(())
     }
 
     fn case_clause(&mut self) -> Result<()> {
-        self.cases() ?;
-        self.case_body() ?;
+        self.cases()?;
+        self.case_body()?;
 
         println!("Case clause Found!");
         Ok(())
@@ -1153,14 +1193,14 @@ impl<'a> Parser<'a> {
 
     fn default_clause(&mut self) -> Result<()> {
         expect!(self.iter, Default);
-        self.case_body() ?;
+        self.case_body()?;
         println!("Default clause Found!");
         Ok(())
     }
 
     fn cases(&mut self) -> Result<()> {
         expect!(self.iter, Case);
-        self.primary(false) ?;
+        self.primary(false)?;
         expect!(self.iter, Colon else ExpectCaseColon);
 
         println!("Cases Found!");
@@ -1169,7 +1209,7 @@ impl<'a> Parser<'a> {
 
     fn case_body(&mut self) -> Result<()> {
         loop {
-            self.stmt() ?;
+            self.stmt()?;
             lookahead!(self.iter,
                 Case => { break; },
                 Default => { break; },
@@ -1183,55 +1223,71 @@ impl<'a> Parser<'a> {
     }
 
     fn param_typerefs(&mut self) -> Result<()> {
-        lookahead!(self.iter, if Void {
-            lookahead!(self.iter, if CloseParentheses {
-                eat!(self.iter, 2); // <Void> and ')'
-                println!("Typedef parameters with no element Found!");
-                return Ok(());
-            });
-        });
+        lookahead!(self.iter,
+                   if Void {
+                       lookahead!(self.iter,
+                                  if CloseParentheses {
+                                      eat!(self.iter, 2); // <Void> and ')'
+                                      println!("Typedef parameters with no element Found!");
+                                      return Ok(());
+                                  });
+                   });
 
-        self.typeref() ?;
+        self.typeref()?;
 
-        lookahead!(self.iter, while Comma {
-            eat!(self.iter); // ','
-            lookahead!(self.iter, if Ellipsis {
+        lookahead!(self.iter,
+                   while Comma {
+                       eat!(self.iter); // ','
+                       lookahead!(self.iter, if Ellipsis {
                 eat!(self.iter);
                 println!("Variable typeref parameters Found!");
                 return Ok(());
             }, else {
                 self.typeref() ?;
             });
-        });
+                   });
 
         println!("Fixed typeref parameter list Found!");
         Ok(())
     }
 
-    fn primary(&mut self, has_ate_left_bracket: bool) -> Result<()> {
+    fn primary(&mut self, has_ate_left_bracket: bool) -> Result<Box<Node>> {
         if has_ate_left_bracket {
-            self.expr() ?;
+            self.expr()?;
             expect!(self.iter, CloseParentheses else
                 ExpectPrimaryRightBracket);
         } else {
             lookahead!(self.iter,
                 Integer => {
-                    eat!(self.iter);
+                    let token: &Token = eat!(self.iter);
+                    return Ok(Box::new(integer_node(token.location(), token.value().unwrap())))
                 },
                 Character => {
-                    eat!(self.iter);                
+                    let token: &Token = eat!(self.iter);
+                    return Ok(Box::new(
+                        IntegerLiteralNode::new(
+                            token.location(),
+                            IntegerTypeRef::Char,
+                            character_code(token.value().unwrap())
+                        )
+                    ))
                 },
                 String => {
-                    eat!(self.iter);
+                    let token: &Token = eat!(self.iter);
+                    return Ok(Box::new(
+                        StringLiteralNode::new(token.location(), token.value().unwrap())
+                    ))
                 },
                 Identifier => {
                     eat!(self.iter);
+                    unimplemented!()
                 },
                 OpenParentheses => {
                     eat!(self.iter);
                     self.expr() ?;
                     expect!(self.iter, CloseParentheses else
                         ExpectPrimaryRightBracket);
+                    unimplemented!()
                 }
                 else {
                     return Err(ParseError::new(ParseErrorKind::InvalidPrimary));
@@ -1240,7 +1296,7 @@ impl<'a> Parser<'a> {
         }
 
         println!("Primary Found!");
-        Ok(())
+        unimplemented!()
     }
 
     fn is_type(&self, name: String) -> bool {
@@ -1251,9 +1307,7 @@ impl<'a> Parser<'a> {
 
 impl ParseError {
     fn new(kind: ParseErrorKind) -> ParseError {
-        ParseError {
-            kind: kind,
-        }
+        ParseError { kind: kind }
     }
 }
 
@@ -1261,7 +1315,7 @@ impl ParseError {
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.kind {
-            ParseErrorKind::ImportTerminalSign => 
+            ParseErrorKind::ImportTerminalSign =>
                 "need a semicolon after the import sentence".fmt(f),
             ParseErrorKind::InvalidIdentifier =>
                 "need a valid identifier".fmt(f),
@@ -1355,3 +1409,4 @@ impl fmt::Display for ParseError {
         }
     }
 }
+

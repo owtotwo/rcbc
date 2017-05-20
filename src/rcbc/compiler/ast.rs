@@ -3,16 +3,16 @@ use super::type_::*;
 
 const INDENT_STRING: &'static str = "    ";
 
-trait Node {
-    fn location(&self) -> &Location;
+pub trait Node {
+    fn location(&self) -> Location;
     fn dump(&self, indent_level: usize);
 }
 
 macro_rules! impl_node_location {
     ($T: ty) => (
         impl Node for $T {
-            fn location(&self) -> &Location {
-                &self.location
+            fn location(&self) -> Location {
+                self.location
             }
             fn dump(&self, indent_level: usize) {
                 let indents: Vec<&'static str> = (0..indent_level)
@@ -64,14 +64,14 @@ impl BinaryOpNode {
     fn new(left: Box<ExprNode>, op: String, right: Box<ExprNode>) -> BinaryOpNode {
         BinaryOpNode {
             location: Location {
-                begin: left.location().clone().begin,
-                end: right.location().clone().end,
+                begin: left.location().begin,
+                end: right.location().end,
             },
             left: left,
             operator: op,
             right: right,
         }
-    }    
+    }
 }
 
 pub struct LogicalAndNode {
@@ -117,7 +117,6 @@ pub struct PtrMemberNode {
 pub struct VariableNode {
     location: Location,
     name: String,
-    // entity: Entity,
 }
 
 trait LiteralNode: ExprNode {
@@ -126,12 +125,13 @@ trait LiteralNode: ExprNode {
 
 pub struct IntegerLiteralNode {
     location: Location,
-    type_node: Box<TypeNode>,
+    type_: IntegerTypeRef,
     value: i64,
 }
 
 pub struct StringLiteralNode {
-    // ...
+    location: Location,
+    value: String,
 }
 
 pub struct SizeofExprNode {
@@ -247,7 +247,6 @@ pub enum TypeNode {
 #[derive(Debug, Clone)]
 pub struct AST {
     location: Location,
-    // declarations: Declarations,
 }
 
 impl AST {
@@ -259,8 +258,8 @@ impl AST {
 }
 
 impl Node for AST {
-    fn location(&self) -> &Location {
-        &self.location
+    fn location(&self) -> Location {
+        self.location
     }
 
     fn dump(&self, indent_level: usize) {
@@ -268,19 +267,48 @@ impl Node for AST {
     }
 }
 
-impl IntegerLiteralNode {
-    fn new(loc: Location, typeref: Box<TypeRef>, val: i64) -> IntegerLiteralNode {
-        IntegerLiteralNode {
-            location: loc,
-            type_node: Box::new(TypeNode::new(typeref)),
-            value: val,
-        }
+impl Node for IntegerLiteralNode {
+    fn location(&self) -> Location {
+        self.location
+    }
+
+    fn dump(&self, indent_level: usize) {
+        unimplemented!()
+    }
+}
+
+impl Node for StringLiteralNode {
+    fn location(&self) -> Location {
+        self.location
+    }
+
+    fn dump(&self, indent_level: usize) {
+        unimplemented!()
     }
 }
 
 impl TypeNode {
-    fn new(typeref: Box<TypeRef>) -> TypeNode {
+    pub fn new(typeref: Box<TypeRef>) -> TypeNode {
         TypeNode::TypeRef(typeref)
+    }
+}
+
+impl IntegerLiteralNode {
+    pub fn new(location: Location, type_: IntegerTypeRef, value: i64) -> Self {
+        IntegerLiteralNode {
+            location: location,
+            type_: type_,
+            value: value,
+        }
+    }
+}
+
+impl StringLiteralNode {
+    pub fn new(location: Location, value: String) -> Self {
+        StringLiteralNode {
+            location: location,
+            value: value
+        }
     }
 }
 
@@ -445,16 +473,16 @@ impl TypeNode {
 //     }
 // }
 
-fn integer_node(loc: Location, val: String) -> IntegerLiteralNode {
-    let i: i64 = integer_value(val.clone());
-    if val.ends_with("UL") {
-        IntegerLiteralNode::new(loc, Box::new(IntegerTypeRef::ulong_ref(loc)), i)
-    } else if val.ends_with("L") {
-        IntegerLiteralNode::new(loc, Box::new(IntegerTypeRef::long_ref(loc)), i)
-    } else if val.ends_with("U") {
-        IntegerLiteralNode::new(loc, Box::new(IntegerTypeRef::uint_ref(loc)), i)
+pub fn integer_node(location: Location, value: String) -> IntegerLiteralNode {
+    let i: i64 = integer_value(value.clone());
+    if value.ends_with("UL") {
+        IntegerLiteralNode::new(location, IntegerTypeRef::UnsignedLong, i)
+    } else if value.ends_with("L") {
+        IntegerLiteralNode::new(location, IntegerTypeRef::Long, i)
+    } else if value.ends_with("U") {
+        IntegerLiteralNode::new(location, IntegerTypeRef::UnsignedInt, i)
     } else {
-        IntegerLiteralNode::new(loc, Box::new(IntegerTypeRef::int_ref(loc)), i)
+        IntegerLiteralNode::new(location, IntegerTypeRef::Int, i)
     }
 }
 
@@ -462,12 +490,12 @@ fn integer_value(val: String) -> i64 {
     val.replace("U", "").replace("L", "").parse::<i64>().unwrap()
 }
 
-fn character_code(val: String) -> i64 {
+pub fn character_code(val: String) -> i64 {
     let mut s = string_value(val);
     assert!(s.len() == 1);
     s.pop().unwrap() as i64
 }
 
-fn string_value(val: String) -> String {
+pub fn string_value(val: String) -> String {
     unimplemented!()
 }

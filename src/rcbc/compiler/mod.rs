@@ -5,6 +5,8 @@
 //!
 //! Have fun.
 
+#![allow(unused_variables, dead_code)]
+
 use std::path::Path;
 use std::io::{self, Read, Write};
 use std::fs::File;
@@ -59,18 +61,17 @@ impl Compiler {
         }
     }
 
-    pub fn compile(&self, src_file: &Path, asm_file: &Path,
-            opts: CompileOption) -> Result<()> {
+    pub fn compile(&self, src_file: &Path, asm_file: &Path, opts: CompileOption) -> Result<()> {
         println!("I will compile these files: {} to {}", 
                  src_file.to_str().unwrap(), asm_file.to_str().unwrap());
-        
         
         let mut char_stream = String::new();
 
         File::open(src_file)
              .and_then(|mut src| src.read_to_string(&mut char_stream)) ?;
 
-        let mut scanner = Scanner::new(src_file, &char_stream);
+        let mut scanner = Scanner::new(&char_stream);
+
         let token_stream = scanner.scan() ?;
 
         if opts.is_dump_tokens {

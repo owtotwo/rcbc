@@ -3,12 +3,10 @@ use super::location::Location;
 use std::result;
 use std::fmt;
 use std::str::Chars;
-use std::path::Path;
 
 type Result<T> = result::Result<T, ScanError>;
 
 pub struct Scanner<'a> {
-    file: &'a Path,
     iter: Chars<'a>,
     line: usize,
     column: usize,
@@ -34,9 +32,8 @@ pub enum ScanErrorKind {
 }
 
 impl<'a> Scanner<'a> {
-    pub fn new(file: &'a Path, stream: &'a String) -> Scanner<'a> {
+    pub fn new(stream: &'a String) -> Scanner<'a> {
         Scanner {
-            file: file,
             iter: stream.chars(),
             line: 1,
             column: 1,

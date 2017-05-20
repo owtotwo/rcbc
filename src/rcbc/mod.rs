@@ -1,4 +1,3 @@
-#![allow(unused_variables, dead_code)]
 extern crate getopts;
 
 use self::getopts::{Options, Matches};
@@ -15,9 +14,9 @@ mod linker;
 const EXT_CFLAT_SOURCE:    &'static str = "cb";
 const EXT_ASSEMBLY_SOURCE: &'static str = "s" ;
 const EXT_OBJECT_FILE:     &'static str = "o" ;
-const EXT_STATIC_LIBRARY:  &'static str = "a" ;
-const EXT_SHARED_LIBRARY:  &'static str = "so";
-const EXT_EXECUTABLE_FILE: &'static str = ""  ;
+// const EXT_STATIC_LIBRARY:  &'static str = "a" ;
+// const EXT_SHARED_LIBRARY:  &'static str = "so";
+// const EXT_EXECUTABLE_FILE: &'static str = ""  ;
 
 const EXECUTABLE_FILE_DEFAULT: &'static str = "a.out";
 
@@ -29,26 +28,26 @@ const EXECUTABLE_FILE_DEFAULT: &'static str = "a.out";
 ///
 pub fn cli() {
     let argv: Vec<String> = env::args().collect();
-    let program = &argv[0];
+    let program: &str = &argv[0][..];
 
     let mut opts = Options::new();
+    
     opts.optflag("h", "help", "Display this information");
     opts.optflag("", "version", "Display compiler version information");
 
     opts.optflag("", "dump-tokens", "Show the token stream by lexer.");
-
     
     let matches = match opts.parse(&argv[1..]) {
         Ok(val) => val,
         Err(why) => {
             println!("{}", why);
-            print_usage(&program, opts);
+            print_usage(program, opts);
             return;
         },
     };
 
     if matches.opt_present("h") {
-        print_usage(&program, opts);
+        print_usage(program, opts);
     } else if matches.free.len() > 0 {
         cli_main(matches);
     } else {
@@ -70,28 +69,24 @@ fn shutdown_for(reason: &str) -> ! {
 
 /// The main process function including compilation, assembly and link.
 fn cli_main(matches: Matches) {
-    let src_files = &matches.free;
-    assert!(!src_files.is_empty());
-
+    let src_files: Vec<PathBuf> = matches.free.iter().map(PathBuf::from).collect();
     let exec_file = PathBuf::from(EXECUTABLE_FILE_DEFAULT);
     
     let compiler = compiler::Compiler::new();
-    let cpr_opts = compiler::CompileOptionBuilder::new()
-        .is_dump_tokens(matches.opt_present("dump-tokens")).finalize();
-
     let assembler = assembler::Assembler::new();
     let linker = linker::Linker::new();
 
-    let src_files: Vec<PathBuf> = src_files.iter().map(PathBuf::from).collect();
+    let compiler_opts = compiler::CompileOptionBuilder::new()
+        .is_dump_tokens(matches.opt_present("dump-tokens")).finalize();
 
     for src_file in src_files.iter() {
         if !src_file.exists() {
-            shutdown_for(&format!("`{}`: No such file or directory",
-                                  src_file.to_str().unwrap()));
+            shutdown_for(&format!("`{}`: No such file or directory", 
+                src_file.to_str().unwrap()));
         }
         if !is_source_file(src_file) {
             shutdown_for(&format!("`{}`: Not valid C-flat source file (*.cb)", 
-                                  src_file.to_str().unwrap()));
+                src_file.to_str().unwrap()));
         }
     }
 
@@ -102,12 +97,16 @@ fn cli_main(matches: Matches) {
         let asm_file = asm_file_name_of(src);
         let obj_file = obj_file_name_of(src);
 
-        if let Err(err) = compiler.compile(&src_file, &asm_file, cpr_opts) {
+        let compile_result = compiler.compile(&src_file, &asm_file, compiler_opts);
+
+        if let Err(err) = compile_result {
             println!("Compiler Error: {}", err);
             return;
         }
 
-        if let Err(err) = assembler.assemble(&asm_file, &obj_file) {
+        let assemble_result = assembler.assemble(&asm_file, &obj_file);
+
+        if let Err(err) = assemble_result {
             println!("Assembler Error: {}", err);
             return;
         }
@@ -115,18 +114,20 @@ fn cli_main(matches: Matches) {
         obj_files.push(obj_file);
     }
 
-    if let Err(err) = linker.link(&obj_files, &exec_file) {
+    let link_result = linker.link(&obj_files, &exec_file);
+
+    if let Err(err) = link_result {
         println!("Assembler Error: {}", err);
         return;
     }
 }
 
-/// ensure the file in path `f` is exist and is a valid source file.
+/// judge if the file in path `file` is a valid source file or not.
 fn is_source_file(file: &Path) -> bool {
     let src_ext: &OsStr = OsStr::new(EXT_CFLAT_SOURCE);
     match file.extension() {
-        Some(src_ext) => true,
-        _             => false,
+        Some(ext) if src_ext == ext => true,
+        _                           => false,
     }
 }
 
