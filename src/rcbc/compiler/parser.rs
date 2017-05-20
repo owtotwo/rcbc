@@ -645,73 +645,100 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    fn term(&mut self) -> Result<()> {
+    fn term(&mut self) -> Result<Box<Node>> {
         lookahead!(self.iter, if OpenParentheses {
             eat!(self.iter);
             match self.type_() { // just try
-                Ok(_) => {
+                Ok(type_) => {
                     expect!(self.iter, CloseParentheses else
                         ExpectCastRightBracket);
-                    self.term() ?;
+                    let node = self.term() ?;
                     println!("Casting Term Found!");
-                    Ok(())
+                    Ok(Box::new(
+                        CastNode::new(unimplemented!(), type_, node)
+                    ))
                 },
                 Err(ParseError { kind: ParseErrorKind::InvalidTyperefBase })
                         => {
-                    self.unary(true) ?;
+                    let node = self.unary(true) ?;
                     println!("Unary Term Found!");
-                    Ok(())
+                    Ok(node)
                 },
                 Err(e) => {
                     Err(e) // real error
                 }
             }
         }, else {
-            self.unary(false) ?;
+            let node = self.unary(false) ?;
             println!("Unary Term Found!");
-            Ok(())
+            Ok(node)
         })
     }
 
-    fn unary(&mut self, has_ate_left_bracket: bool) -> Result<()> {
+    fn unary(&mut self, has_ate_left_bracket: bool) -> Result<Box<Node>> {
         if has_ate_left_bracket {
             self.postfix(has_ate_left_bracket)?;
             println!("Unary Found!");
-            return Ok(());
+            // return Ok(());
+            unimplemented!()
         }
 
         lookahead!(self.iter,
             Increment => {
-                eat!(self.iter);
-                self.unary(false) ?;
+                let token: &Token = eat!(self.iter);
+                let node = self.unary(false) ?;
+                return Ok(Box::new(
+                    PrefixOpNode::new(token.location(), PrefixOpType::Increment, node)
+                ));
             },
             Decrement => {
-                eat!(self.iter);
-                self.unary(false) ?;
+                let token: &Token = eat!(self.iter);
+                let node = self.unary(false) ?;
+                return Ok(Box::new(
+                    PrefixOpNode::new(token.location(), PrefixOpType::Decrement, node)
+                ));
             },
             Plus => {
-                eat!(self.iter);
-                self.term() ?;
+                let token: &Token = eat!(self.iter);
+                let node = self.term() ?;
+                return Ok(Box::new(
+                    UnaryOpNode::new(token.location(), UnaryOpType::Plus, node)
+                ));
             },
             Hyphen => {
-                eat!(self.iter);
-                self.term() ?;
+                let token: &Token = eat!(self.iter);
+                let node = self.term() ?;
+                return Ok(Box::new(
+                    UnaryOpNode::new(token.location(), UnaryOpType::Hyphen, node)
+                ));
             },
             ExclamationMark => {
-                eat!(self.iter);
-                self.term() ?;
+                let token: &Token = eat!(self.iter);
+                let node = self.term() ?;
+                return Ok(Box::new(
+                    UnaryOpNode::new(token.location(), UnaryOpType::ExclamationMark, node)
+                ));
             },
             Tilde => {
-                eat!(self.iter);
-                self.term() ?;
+                let token: &Token = eat!(self.iter);
+                let node = self.term() ?;
+                return Ok(Box::new(
+                    UnaryOpNode::new(token.location(), UnaryOpType::Tilde, node)
+                ));
             },
             Asterisk => {
-                eat!(self.iter);
-                self.term() ?;
+                let token: &Token = eat!(self.iter);
+                let node = self.term() ?;
+                return Ok(Box::new(
+                    DereferenceNode::new(token.location(), node)
+                ));
             },
             Ampersand => {
-                eat!(self.iter);
-                self.term() ?;
+                let token: &Token = eat!(self.iter);
+                let node = self.term() ?;
+                return Ok(Box::new(
+                    AddressNode::new(token.location(), node)
+                ));
             },
             Sizeof => {
                 eat!(self.iter);
@@ -722,13 +749,17 @@ impl<'a> Parser<'a> {
                             expect!(self.iter, CloseParentheses else
                                 ExpectCastRightBracket);
                             println!("Sizeof(type) Found!");
-                            return Ok(());
+                            return Ok(Box::new(
+                                unimplemented!()
+                            ));
                         },
                         Err(ParseError { kind:
                                 ParseErrorKind::InvalidTyperefBase }) => {
                             self.unary(true) ?;
                             println!("Sizeof expression Found!");
-                            return Ok(());
+                            return Ok(Box::new(
+                                unimplemented!()
+                            ));
                         },
                         Err(e) => {
                             return Err(e); // real error
@@ -737,7 +768,9 @@ impl<'a> Parser<'a> {
                 }, else {
                     self.unary(false) ?;
                     println!("Sizeof expression Found!");
-                    return Ok(());
+                    return Ok(Box::new(
+                        unimplemented!()
+                    ));
                 });
             }
             else {
@@ -746,7 +779,7 @@ impl<'a> Parser<'a> {
         );
 
         println!("Unary Found!");
-        Ok(())
+        unimplemented!()
     }
 
     fn postfix(&mut self, has_ate_left_bracket: bool) -> Result<()> {
@@ -816,13 +849,13 @@ impl<'a> Parser<'a> {
     }
 
     // crash the keyword `type`, so type_
-    fn type_(&mut self) -> Result<()> {
-        self.typeref()?;
+    fn type_(&mut self) -> Result<Box<TypeRef>> {
+        let typeref = self.typeref()?;
         println!("Type Found!");
-        Ok(())
+        Ok(typeref)
     }
 
-    fn typeref(&mut self) -> Result<()> {
+    fn typeref(&mut self) -> Result<Box<TypeRef>> {
         self.typeref_base()?;
         loop {
             lookahead!(self.iter,
@@ -857,7 +890,7 @@ impl<'a> Parser<'a> {
         }
 
         println!("Typeref Found!");
-        Ok(())
+        unimplemented!()
     }
 
     fn typeref_base(&mut self) -> Result<()> {
@@ -1279,14 +1312,17 @@ impl<'a> Parser<'a> {
                     ))
                 },
                 Identifier => {
-                    eat!(self.iter);
-                    unimplemented!()
+                    let token: &Token = eat!(self.iter);
+                    return Ok(Box::new(
+                        VariableNode::new(token.location(), token.value().unwrap())
+                    ))
                 },
                 OpenParentheses => {
                     eat!(self.iter);
-                    self.expr() ?;
+                    let node = self.expr() ?;
                     expect!(self.iter, CloseParentheses else
                         ExpectPrimaryRightBracket);
+                    // return Ok(Box::new(node))
                     unimplemented!()
                 }
                 else {

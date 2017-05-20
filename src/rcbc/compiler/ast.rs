@@ -43,7 +43,8 @@ pub struct OpAssignNode {
 }
 
 pub struct AddressNode {
-    // ...
+    location: Location,
+    node: Box<Node>,
 }
 
 trait BinaryOpTrait: ExprNode {
@@ -83,7 +84,9 @@ pub struct LogicalOrNode {
 }
 
 pub struct CastNode {
-    // ...
+    location: Location,
+    type_: Box<TypeRef>,
+    node: Box<Node>,
 }
 
 pub struct CondExprNode {
@@ -103,7 +106,8 @@ pub struct ArefNode {
 }
 
 pub struct DereferenceNode {
-    // ...
+    location: Location,
+    node: Box<Node>,
 }
 
 pub struct MemberNode {
@@ -142,16 +146,32 @@ pub struct SizeofTypeNode {
     // ...
 }
 
-trait UnaryOpNode: ExprNode {
+pub enum UnaryOpType {
+    Plus,
+    Hyphen,
+    ExclamationMark,
+    Tilde,
+}
+
+pub struct UnaryOpNode {
+    location: Location,
+    type_: UnaryOpType,
+    node: Box<Node>,
+}
+
+trait UnaryArithmeticOpNode {
     // ...
 }
 
-trait UnaryArithmeticOpNode: UnaryOpNode {
-    // ...
+pub enum PrefixOpType {
+    Increment,
+    Decrement,
 }
 
 pub struct PrefixOpNode {
-    // ...
+    location: Location,
+    type_: PrefixOpType,
+    node: Box<Node>,
 }
 
 pub struct SuffixOpNode {
@@ -175,7 +195,9 @@ pub struct BreakNode {
 }
 
 pub struct CaseNode {
-    // ...
+    location: Location,
+    type_: Box<TypeRef>,
+    node: Box<Node>,
 }
 
 pub struct ContinueNode {
@@ -287,6 +309,66 @@ impl Node for StringLiteralNode {
     }
 }
 
+impl Node for VariableNode {
+    fn location(&self) -> Location {
+        self.location
+    }
+
+    fn dump(&self, indent_level: usize) {
+        unimplemented!()
+    }
+}
+
+impl Node for PrefixOpNode {
+    fn location(&self) -> Location {
+        self.location
+    }
+
+    fn dump(&self, indent_level: usize) {
+        unimplemented!()
+    }
+}
+
+impl Node for UnaryOpNode {
+    fn location(&self) -> Location {
+        self.location
+    }
+
+    fn dump(&self, indent_level: usize) {
+        unimplemented!()
+    }
+}
+
+impl Node for DereferenceNode {
+    fn location(&self) -> Location {
+        self.location
+    }
+
+    fn dump(&self, indent_level: usize) {
+        unimplemented!()
+    }
+}
+
+impl Node for AddressNode {
+    fn location(&self) -> Location {
+        self.location
+    }
+
+    fn dump(&self, indent_level: usize) {
+        unimplemented!()
+    }
+}
+
+impl Node for CastNode {
+    fn location(&self) -> Location {
+        self.location
+    }
+
+    fn dump(&self, indent_level: usize) {
+        unimplemented!()
+    }
+}
+
 impl TypeNode {
     pub fn new(typeref: Box<TypeRef>) -> TypeNode {
         TypeNode::TypeRef(typeref)
@@ -308,6 +390,63 @@ impl StringLiteralNode {
         StringLiteralNode {
             location: location,
             value: value
+        }
+    }
+}
+
+impl VariableNode {
+    pub fn new(location: Location, name: String) -> Self {
+        VariableNode {
+            location: location,
+            name: name
+        }
+    }
+}
+
+impl PrefixOpNode {
+    pub fn new(location: Location, type_: PrefixOpType, node: Box<Node>) -> Self {
+        PrefixOpNode {
+            location: location,
+            type_: type_,
+            node: node,
+        }
+    }
+}
+
+impl UnaryOpNode {
+    pub fn new(location: Location, type_: UnaryOpType, node: Box<Node>) -> Self {
+        UnaryOpNode {
+            location: location,
+            type_: type_,
+            node: node,
+        }
+    }
+}
+
+impl DereferenceNode {
+    pub fn new(location: Location, node: Box<Node>) -> Self {
+        DereferenceNode {
+            location: location,
+            node: node,
+        }
+    }
+}
+
+impl AddressNode {
+    pub fn new(location: Location, node: Box<Node>) -> Self {
+        AddressNode {
+            location: location,
+            node: node,
+        }
+    }
+}
+
+impl CastNode {
+    pub fn new(location: Location, type_: Box<TypeRef>, node: Box<Node>) -> Self {
+        CastNode {
+            location: location,
+            type_: type_,
+            node: node,
         }
     }
 }
