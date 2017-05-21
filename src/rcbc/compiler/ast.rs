@@ -9,7 +9,7 @@ pub trait Node {
 }
 
 macro_rules! impl_node_trait {
-    ($t: ty, $string: block) => (
+    ($t: ty, $self_: ident, $string: block) => (
         impl Node for $t {
             fn location(&self) -> Location {
                 self.location
@@ -19,6 +19,7 @@ macro_rules! impl_node_trait {
                                                     .map(|_| INDENT_STRING)
                                                     .collect();
                 let indent: String = indents.concat();
+                let $self_ = self;
                 format!("{}{}", indent, $string)
             }
         }
@@ -28,14 +29,15 @@ macro_rules! impl_node_trait {
 macro_rules! define_node {
     ($node_name: ident; {
         $($member_name: ident: $member_type: ty),*
-    }; $string: block) => (
+    }; $self_: ident, $string: block) => (
+        #[derive(Debug, Clone)]
         pub struct $node_name {
             location: Location,
             $($member_name: $member_type),*
         }
 
         impl $node_name {
-            fn new(location: Location, $($member_name: $member_type),*) -> Self {
+            pub fn new(location: Location, $($member_name: $member_type),*) -> Self {
                 $node_name {
                     location: location,
                     $($member_name: $member_name),*
@@ -43,12 +45,20 @@ macro_rules! define_node {
             }
         }
 
-        impl_node_trait!($node_name, $string);
+        impl_node_trait!($node_name, $self_, $string);
     )
 }
 
 
-define_node!(NewNode; { name: String }; { "<NewNode>..." });
+define_node!(
+    AST;
+    {};
+    self_, {
+        format!("<<AST>> ({})\n", self_.location) +
+        "variable: \n" +
+        "function: \n"
+    }
+);
 
 trait ExprNode: Node {}
 
@@ -172,11 +182,7 @@ pub struct BlockNode {}
 
 pub struct BreakNode {}
 
-pub struct CaseNode {
-    location: Location,
-    type_: Box<TypeRef>,
-    node: Box<Node>,
-}
+pub struct CaseNode {}
 
 pub struct ContinueNode {}
 
@@ -211,30 +217,6 @@ trait TypedefNode: TypeDefinition {}
 pub enum TypeNode {
     Type(Box<Type>),
     TypeRef(Box<TypeRef>),
-}
-
-
-#[derive(Debug, Clone)]
-pub struct AST {
-    location: Location,
-}
-
-impl AST {
-    pub fn new(location: Location) -> AST {
-        AST {
-            location: location,
-        }
-    }
-}
-
-impl Node for AST {
-    fn location(&self) -> Location {
-        self.location
-    }
-
-    fn dump(&self, indent_level: usize) -> String {
-        unimplemented!()
-    }
 }
 
 impl Node for IntegerLiteralNode {
