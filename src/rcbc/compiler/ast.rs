@@ -73,18 +73,18 @@ define_node!(
     }
 );
 
-define_node!(
-    BinaryOpNode;
-    {
-        operator: String,
-        left: Box<ExprNode>,
-        right: Box<ExprNode>,
-        type_: Box<Type>,
-    };
-    self_, {
-        format!("<<BinaryOpNode>> ({})\n", self_.location)
-    }
-);
+// define_node!(
+//     BinaryOpNode;
+//     {
+//         operator: String,
+//         left: Box<ExprNode>,
+//         right: Box<ExprNode>,
+//         type_: Box<Type>,
+//     };
+//     self_, {
+//         format!("<<BinaryOpNode>> ({})\n", self_.location)
+//     }
+// );
 
 define_node!(
     StringLiteralNode;
@@ -159,6 +159,83 @@ define_node!(
     }
 );
 
+define_node!(
+    SizeofTypeNode;
+    {
+        type_: Box<TypeRef>,
+        size: i64,
+    };
+    self_, {
+        format!("<<SizeofTypeNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    SizeofExprNode;
+    {
+        node: Box<Node>,
+        size: i64,
+    };
+    self_, {
+        format!("<<SizeofTypeNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    SuffixOpNode;
+    {
+        type_: SuffixOpType,
+        expr: Box<Node>,
+    };
+    self_, {
+        format!("<<SuffixOpNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    ArefNode;
+    {
+        expr: Box<Node>,
+        idx: Box<Node>, // another expr
+    };
+    self_, {
+        format!("<<ArefNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    MemberNode;
+    {
+        expr: Box<Node>,
+        memb: Box<Node>, // another expr
+    };
+    self_, {
+        format!("<<MemberNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    PtrMemberNode;
+    {
+        expr: Box<Node>,
+        memb: Box<Node>, // another expr
+    };
+    self_, {
+        format!("<<PtrMemberNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    FuncallNode;
+    {
+        expr: Box<Node>,
+        args: Vec<Box<Node>>, // another expr
+    };
+    self_, {
+        format!("<<FuncallNode>> ({})\n", self_.location)
+    }
+);
+
 trait ExprNode: Node {}
 
 trait AssignNodeTrait: ExprNode {}
@@ -175,22 +252,9 @@ pub struct LogicalOrNode {}
 
 pub struct CondExprNode {}
 
-pub struct FuncallNode {}
-
 trait LHSNode: ExprNode {}
 
-pub struct ArefNode {}
-
-pub struct MemberNode {}
-
-pub struct PtrMemberNode {}
-
 trait LiteralNode: ExprNode {}
-
-
-pub struct SizeofExprNode {}
-
-pub struct SizeofTypeNode {}
 
 #[derive(Debug, Copy, Clone)]
 pub enum UnaryOpType {
@@ -208,7 +272,11 @@ pub enum PrefixOpType {
     Decrement,
 }
 
-pub struct SuffixOpNode {}
+#[derive(Debug, Copy, Clone)]
+pub enum SuffixOpType {
+    Increment,
+    Decrement,
+}
 
 pub struct Slot {}
 

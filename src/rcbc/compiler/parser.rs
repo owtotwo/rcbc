@@ -75,17 +75,17 @@ macro_rules! eat {
 macro_rules! expect {
     ($Iter: expr, $Kind: ident else $Errorkind: ident) => ({
         lookahead!($Iter, if $Kind {
-            eat!($Iter);
+            eat!($Iter)
         }, else {
             return Err(ParseError::new(ParseErrorKind::$Errorkind));
-        });
+        })
     });
     ($Iter: expr, $Kind: ident) => ({
         lookahead!($Iter, if $Kind {
-            eat!($Iter);
+            eat!($Iter)
         }, else {
             unreachable!()
-        });
+        })
     })
 }
 
@@ -329,11 +329,12 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    fn name(&mut self) -> Result<()> {
+    fn name(&mut self) -> Result<Box<Node>> {
         lookahead!(self.iter, if Identifier {
             eat!(self.iter); // <Identifier>
             println!("Identifier Found!");
-            Ok(())
+            // Ok(())
+            unimplemented!()
         }, else {
             println!("Identifier Error!");
             Err(ParseError::new(ParseErrorKind::InvalidIdentifier))
@@ -378,7 +379,7 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    fn expr(&mut self) -> Result<()> {
+    fn expr(&mut self) -> Result<Box<Node>> {
         let term = self.term()?;
 
         lookahead!(self.iter,
@@ -387,83 +388,83 @@ impl<'a> Parser<'a> {
                 self.expr() ?;
 
                 println!("Assignment statement Found!");
-                Ok(())
+                unimplemented!()
             },
             AddAssign => {
                 eat!(self.iter);
                 self.expr() ?;
 
                 println!("Add assignment statement Found!");
-                Ok(())
+                unimplemented!()
             },
             SubtractAssign => {
                 eat!(self.iter);
                 self.expr() ?;
 
                 println!("Subtract assignment statement Found!");
-                Ok(())
+                unimplemented!()
             },
             MultiplyAssign => {
                 eat!(self.iter);
                 self.expr() ?;
 
                 println!("Multiply assignment statement Found!");
-                Ok(())
+                unimplemented!()
             },
             DivideAssign => {
                 eat!(self.iter);
                 self.expr() ?;
 
                 println!("Divide assignment statement Found!");
-                Ok(())
+                unimplemented!()
             },
             ModuloAssign => {
                 eat!(self.iter);
                 self.expr() ?;
 
                 println!("Modulo assignment statement Found!");
-                Ok(())
+                unimplemented!()
             },
             AndAssign => {
                 eat!(self.iter);
                 self.expr() ?;
 
                 println!("And assignment statement Found!");
-                Ok(())
+                unimplemented!()
             },
             ExclusiveOrAssign => {
                 eat!(self.iter);
                 self.expr() ?;
 
                 println!("ExclusiveOr assignment statement Found!");
-                Ok(())
+                unimplemented!()
             },
             OrAssign => {
                 eat!(self.iter);
                 self.expr() ?;
 
                 println!("Or assignment statement Found!");
-                Ok(())
+                unimplemented!()
             },
             LeftShiftAssign => {
                 eat!(self.iter);
                 self.expr() ?;
 
                 println!("LeftShift assignment statement Found!");
-                Ok(())
+                unimplemented!()
             },
             RightShiftAssign => {
                 eat!(self.iter);
                 self.expr() ?;
 
                 println!("RightShift assignment statement Found!");
-                Ok(())
+                unimplemented!()
             }
             else {
                 self.expr_10(Some(term)) ?;
 
                 println!("Expression Found!");
-                Ok(())
+                unimplemented!()
             }
         )
     }
@@ -647,22 +648,20 @@ impl<'a> Parser<'a> {
 
     fn term(&mut self) -> Result<Box<Node>> {
         lookahead!(self.iter, if OpenParentheses {
-            eat!(self.iter);
+            let open = eat!(self.iter);
             match self.type_() { // just try
                 Ok(type_) => {
-                    expect!(self.iter, CloseParentheses else
+                    let close: &Token = expect!(self.iter, CloseParentheses else
                         ExpectCastRightBracket);
                     let node = self.term() ?;
                     println!("Casting Term Found!");
-                    Ok(Box::new(
-                        CastNode::new(unimplemented!(), type_, node)
-                    ))
+                    let location = Location::range(open.location(), close.location());
+                    Ok(Box::new(CastNode::new(location, type_, node)))
                 },
-                Err(ParseError { kind: ParseErrorKind::InvalidTyperefBase })
-                        => {
+                Err(ParseError { kind: ParseErrorKind::InvalidTyperefBase }) => {
                     let node = self.unary(true) ?;
                     println!("Unary Term Found!");
-                    Ok(node)
+                    Ok(node) // TODO: should update location
                 },
                 Err(e) => {
                     Err(e) // real error
@@ -677,10 +676,9 @@ impl<'a> Parser<'a> {
 
     fn unary(&mut self, has_ate_left_bracket: bool) -> Result<Box<Node>> {
         if has_ate_left_bracket {
-            self.postfix(has_ate_left_bracket)?;
+            let node = self.postfix(has_ate_left_bracket)?;
             println!("Unary Found!");
-            // return Ok(());
-            unimplemented!()
+            return Ok(node);
         }
 
         lookahead!(self.iter,
@@ -741,91 +739,95 @@ impl<'a> Parser<'a> {
                 ));
             },
             Sizeof => {
-                eat!(self.iter);
+                let left = eat!(self.iter);
                 lookahead!(self.iter, if OpenParentheses {
                     eat!(self.iter);
                     match self.type_() { // just try
-                        Ok(_type) => {
-                            expect!(self.iter, CloseParentheses else
-                                ExpectCastRightBracket);
+                        Ok(type_) => {
+                            let right = expect!(self.iter, CloseParentheses else ExpectCastRightBracket);
                             println!("Sizeof(type) Found!");
-                            // return Ok(Box::new());
-                            unimplemented!()
+                            let location = Location::range(left.location(), right.location());
+                            return Ok(Box::new(SizeofTypeNode::new(location, type_, unimplemented!())));
                         },
-                        Err(ParseError { kind:
-                                ParseErrorKind::InvalidTyperefBase }) => {
-                            self.unary(true) ?;
+                        Err(ParseError { kind: ParseErrorKind::InvalidTyperefBase }) => {
+                            let node = self.unary(true) ?;
                             println!("Sizeof expression Found!");
-                            // return Ok(Box::new());
-                            unimplemented!()
+                            let location = Location::range(left.location(), node.location());
+                            return Ok(Box::new(SizeofExprNode::new(location, node, unimplemented!())));
                         },
                         Err(e) => {
                             return Err(e); // real error
                         }
                     };
                 }, else {
-                    self.unary(false) ?;
+                    let node = self.unary(false) ?;
                     println!("Sizeof expression Found!");
-                    // return Ok(Box::new());
-                    unimplemented!()
+                    let location = Location::range(left.location(), node.location());
+                    return Ok(Box::new(SizeofExprNode::new(location, node, unimplemented!())));
                 });
             }
             else {
-                self.postfix(false) ?;
+                let node = self.postfix(false) ?;
+                return Ok(node)
             }
         );
 
         println!("Unary Found!");
-        unimplemented!()
     }
 
-    fn postfix(&mut self, has_ate_left_bracket: bool) -> Result<()> {
-        self.primary(has_ate_left_bracket)?;
+    fn postfix(&mut self, has_ate_left_bracket: bool) -> Result<Box<Node>> {
+        let mut expr = self.primary(has_ate_left_bracket) ?;
         loop {
             lookahead!(self.iter,
                 Increment => {
-                    eat!(self.iter);
+                    let right = eat!(self.iter);
+                    let location = Location::range(expr.location(), right.location());
+                    expr = Box::new(SuffixOpNode::new(location, SuffixOpType::Increment, expr));
                 },
                 Decrement => {
-                    eat!(self.iter);
+                    let right = eat!(self.iter);
+                    let location = Location::range(expr.location(), right.location());
+                    expr = Box::new(SuffixOpNode::new(location, SuffixOpType::Decrement, expr));
                 },
                 OpeningBracket => {
                     eat!(self.iter);
-                    self.expr() ?;
-                    expect!(self.iter, ClosingBracket else
-                        ArrayReferenceTerminal);
-                    // println!("Array reference postfix Found!");
-                    // return Ok(());
+                    let idx = self.expr() ?;
+                    let right = expect!(self.iter, ClosingBracket else ArrayReferenceTerminal);
+                    println!("Array reference postfix Found!");
+                    let location = Location::range(expr.location(), right.location());
+                    expr = Box::new(ArefNode::new(location, expr, idx));
                 },
                 Dot => {
                     eat!(self.iter);
-                    self.name() ?;
-                    // println!("Structure or Union member reference postfix Found!");
-                    // return Ok(());
+                    let memb = self.name() ?;
+                    println!("Structure or Union member reference postfix Found!");
+                    let location = Location::range(expr.location(), memb.location());
+                    expr = Box::new(MemberNode::new(location, expr, memb));
                 },
                 Arrow => {
                     eat!(self.iter);
-                    self.name() ?;
-                    // println!("Reference by pointer postfix Found!");
-                    // return Ok(());
+                    let memb = self.name() ?;
+                    println!("Reference by pointer postfix Found!");
+                    let location = Location::range(expr.location(), memb.location());
+                    expr = Box::new(PtrMemberNode::new(location, expr, memb));
                 },
                 OpenParentheses => {
                     eat!(self.iter);
-                    self.args() ?;
-                    expect!(self.iter, CloseParentheses else
-                        FunctionCallArgsTerminal);
-                    // println!("Function call postfix Found!");
-                    // return Ok(());
+                    let args: Vec<Box<Node>> = self.args() ?;
+                    let right = expect!(self.iter, CloseParentheses else FunctionCallArgsTerminal);
+                    let location = Location::range(expr.location(), right.location());
+                    println!("Function call postfix Found!");
+                    expr = Box::new(FuncallNode::new(location, expr, args));
                 }
                 else { break; }
             );
         }
 
         println!("postfix Found!");
-        Ok(())
+        Ok(expr)
     }
 
-    fn args(&mut self) -> Result<()> {
+    fn args(&mut self) -> Result<Vec<Box<Node>>> {
         lookahead!(self.iter, if CloseParentheses { /* Empty args */ }, else {
             self.expr() ?;
             lookahead!(self.iter, while Comma {
@@ -835,7 +837,8 @@ impl<'a> Parser<'a> {
         });
 
         println!("Args Found!");
-        Ok(())
+        // Ok(())
+        unimplemented!()
     }
 
     fn param(&mut self) -> Result<()> {

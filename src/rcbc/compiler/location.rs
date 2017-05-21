@@ -23,6 +23,13 @@ impl Location {
             end: Position::new(end_line, end_column),
         }
     }
+
+    pub fn range(left_location: Location, right_location: Location) -> Location {
+        Location {
+            begin: left_location.begin,
+            end: right_location.end,
+        }
+    }
 }
 
 impl Default for Location {
@@ -51,3 +58,4 @@ impl fmt::Display for Position {
         write!(f, "{}:{}", self.line, self.column)
     }
 }
+
