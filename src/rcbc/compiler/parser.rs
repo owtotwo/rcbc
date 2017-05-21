@@ -355,15 +355,15 @@ impl<'a> Parser<'a> {
 
         lookahead!(self.iter,
                    while Comma {
-                       eat!(self.iter); // ','
-                       lookahead!(self.iter, if Ellipsis {
+            eat!(self.iter); // ','
+            lookahead!(self.iter, if Ellipsis {
                 eat!(self.iter);
                 println!("Variable parameter Found!");
                 return Ok(());
             }, else {
                 self.param() ?;
             });
-                   });
+        });
 
         println!("Fixed parameter list Found!");
         Ok(())
@@ -468,20 +468,20 @@ impl<'a> Parser<'a> {
         )
     }
 
-    fn expr_10(&mut self, term: Option<()>) -> Result<()> {
+    fn expr_10(&mut self, term: Option<Box<Node>>) -> Result<()> {
         self.expr_9(term)?;
 
         lookahead!(self.iter,
                    if QuestionMark {
-                       self.expr()?;
-                       expect!(self.iter, Colon else ExpectTernaryColon);
-                       self.expr_10(None)?;
-                   });
+            self.expr()?;
+            expect!(self.iter, Colon else ExpectTernaryColon);
+            self.expr_10(None)?;
+        });
 
         Ok(())
     }
 
-    fn expr_9(&mut self, term: Option<()>) -> Result<()> {
+    fn expr_9(&mut self, term: Option<Box<Node>>) -> Result<()> {
         self.expr_8(term)?;
 
         lookahead!(self.iter,
@@ -493,7 +493,7 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    fn expr_8(&mut self, term: Option<()>) -> Result<()> {
+    fn expr_8(&mut self, term: Option<Box<Node>>) -> Result<()> {
         self.expr_7(term)?;
 
         lookahead!(self.iter,
@@ -505,7 +505,7 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    fn expr_7(&mut self, term: Option<()>) -> Result<()> {
+    fn expr_7(&mut self, term: Option<Box<Node>>) -> Result<()> {
         self.expr_6(term)?;
 
         loop {
@@ -541,7 +541,7 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    fn expr_6(&mut self, term: Option<()>) -> Result<()> {
+    fn expr_6(&mut self, term: Option<Box<Node>>) -> Result<()> {
         self.expr_5(term)?;
 
         lookahead!(self.iter,
@@ -553,7 +553,7 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    fn expr_5(&mut self, term: Option<()>) -> Result<()> {
+    fn expr_5(&mut self, term: Option<Box<Node>>) -> Result<()> {
         self.expr_4(term)?;
 
         lookahead!(self.iter,
@@ -565,7 +565,7 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    fn expr_4(&mut self, term: Option<()>) -> Result<()> {
+    fn expr_4(&mut self, term: Option<Box<Node>>) -> Result<()> {
         self.expr_3(term)?;
 
         lookahead!(self.iter,
@@ -577,7 +577,7 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    fn expr_3(&mut self, term: Option<()>) -> Result<()> {
+    fn expr_3(&mut self, term: Option<Box<Node>>) -> Result<()> {
         self.expr_2(term)?;
 
         loop {
@@ -597,7 +597,7 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    fn expr_2(&mut self, term: Option<()>) -> Result<()> {
+    fn expr_2(&mut self, term: Option<Box<Node>>) -> Result<()> {
         self.expr_1(term)?;
 
         loop {
@@ -617,7 +617,7 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    fn expr_1(&mut self, term: Option<()>) -> Result<()> {
+    fn expr_1(&mut self, term: Option<Box<Node>>) -> Result<()> {
         let term = if term.is_some() {
             term.unwrap()
         } else {
@@ -749,17 +749,15 @@ impl<'a> Parser<'a> {
                             expect!(self.iter, CloseParentheses else
                                 ExpectCastRightBracket);
                             println!("Sizeof(type) Found!");
-                            return Ok(Box::new(
-                                unimplemented!()
-                            ));
+                            // return Ok(Box::new());
+                            unimplemented!()
                         },
                         Err(ParseError { kind:
                                 ParseErrorKind::InvalidTyperefBase }) => {
                             self.unary(true) ?;
                             println!("Sizeof expression Found!");
-                            return Ok(Box::new(
-                                unimplemented!()
-                            ));
+                            // return Ok(Box::new());
+                            unimplemented!()
                         },
                         Err(e) => {
                             return Err(e); // real error
@@ -768,9 +766,8 @@ impl<'a> Parser<'a> {
                 }, else {
                     self.unary(false) ?;
                     println!("Sizeof expression Found!");
-                    return Ok(Box::new(
-                        unimplemented!()
-                    ));
+                    // return Ok(Box::new());
+                    unimplemented!()
                 });
             }
             else {
@@ -1270,15 +1267,15 @@ impl<'a> Parser<'a> {
 
         lookahead!(self.iter,
                    while Comma {
-                       eat!(self.iter); // ','
-                       lookahead!(self.iter, if Ellipsis {
+            eat!(self.iter); // ','
+            lookahead!(self.iter, if Ellipsis {
                 eat!(self.iter);
                 println!("Variable typeref parameters Found!");
                 return Ok(());
             }, else {
                 self.typeref() ?;
             });
-                   });
+        });
 
         println!("Fixed typeref parameter list Found!");
         Ok(())

@@ -1,62 +1,40 @@
 use super::location::Location;
 
-pub trait Type {
-    // ...
-}
+// ---------- Type ----------
 
-pub struct ArrayType {
-    // ...
-}
+pub trait Type {}
 
-pub struct FunctionType {
-    // ...
-}
+pub struct ArrayType {}
 
-pub struct IntegerType {
-    // ...
-}
+pub struct FunctionType {}
 
-pub struct NamedType {
-    // ...
-}
+pub struct IntegerType {}
 
-pub struct CompositeType {
-    // ...
-}
+pub struct NamedType {}
 
-pub struct StructType {
-    // ...
-}
+pub struct CompositeType {}
 
-pub struct UnionType {
-    // ...
-}
+pub struct StructType {}
 
-pub struct UserType {
-    // ...
-}
+pub struct UnionType {}
+
+pub struct UserType {}
 
 pub struct PointerType {
     size: usize,
     base_type: Box<Type>,
 }
 
-pub struct VoidType {
-    // ...
-}
+pub struct VoidType {}
 
 
-pub trait TypeRef {
-    // ...
-}
+// ---------- TypeRef ----------
 
-pub struct ArrayTypeRef {
-    // ...
-}
+pub trait TypeRef {}
 
-pub struct FunctionTypeRef {
-    // ...
-}
+pub struct ArrayTypeRef {}
+
+pub struct FunctionTypeRef {}
 
 pub enum IntegerTypeRef {
     Char,
@@ -69,33 +47,21 @@ pub enum IntegerTypeRef {
     UnsignedLong,
 }
 
-pub struct NamedTypeRef {
-    // ...
-}
+pub struct NamedTypeRef {}
 
-pub struct CompositeTypeRef {
-    // ...
-}
+pub struct CompositeTypeRef {}
 
-pub struct StructTypeRef {
-    // ...
-}
+pub struct StructTypeRef {}
 
-pub struct UnionTypeRef {
-    // ...
-}
+pub struct UnionTypeRef {}
 
-pub struct UserTypeRef {
-    // ...
-}
+pub struct UserTypeRef {}
 
 pub struct PointerTypeRef {
     base_type: Box<TypeRef>,
 }
 
-pub struct VoidTypeRef {
-    // ...
-}
+pub struct VoidTypeRef {}
 
 impl TypeRef for IntegerTypeRef {}
 

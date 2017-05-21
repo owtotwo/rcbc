@@ -5,51 +5,65 @@ const INDENT_STRING: &'static str = "    ";
 
 pub trait Node {
     fn location(&self) -> Location;
-    fn dump(&self, indent_level: usize);
+    fn dump(&self, indent_level: usize) -> String;
 }
 
-macro_rules! impl_node_location {
-    ($T: ty) => (
-        impl Node for $T {
+macro_rules! impl_node_trait {
+    ($t: ty, $string: block) => (
+        impl Node for $t {
             fn location(&self) -> Location {
                 self.location
             }
-            fn dump(&self, indent_level: usize) {
+            fn dump(&self, indent_level: usize) -> String {
                 let indents: Vec<&'static str> = (0..indent_level)
                                                     .map(|_| INDENT_STRING)
                                                     .collect();
                 let indent: String = indents.concat();
-                println!("{}{}", indent, "<Content...>");
+                format!("{}{}", indent, $string)
             }
         }
     )
 }
 
+macro_rules! define_node {
+    ($node_name: ident; {
+        $($member_name: ident: $member_type: ty),*
+    }; $string: block) => (
+        pub struct $node_name {
+            location: Location,
+            $($member_name: $member_type),*
+        }
 
-trait ExprNode: Node {
-    // ...
+        impl $node_name {
+            fn new(location: Location, $($member_name: $member_type),*) -> Self {
+                $node_name {
+                    location: location,
+                    $($member_name: $member_name),*
+                }
+            }
+        }
+
+        impl_node_trait!($node_name, $string);
+    )
 }
 
-trait AssignNodeTrait: ExprNode {
-    // ...
-}
 
-pub struct AssignNode {
-    // ...
-}
+define_node!(NewNode; { name: String }; { "<NewNode>..." });
 
-pub struct OpAssignNode {
-    // ...
-}
+trait ExprNode: Node {}
+
+trait AssignNodeTrait: ExprNode {}
+
+pub struct AssignNode {}
+
+pub struct OpAssignNode {}
 
 pub struct AddressNode {
     location: Location,
     node: Box<Node>,
 }
 
-trait BinaryOpTrait: ExprNode {
-    // ...
-}
+trait BinaryOpTrait: ExprNode {}
 
 pub struct BinaryOpNode {
     location: Location,
@@ -58,8 +72,6 @@ pub struct BinaryOpNode {
     right: Box<ExprNode>,
     // type_: Box<Type>,
 }
-
-impl_node_location!(BinaryOpNode);
 
 impl BinaryOpNode {
     fn new(left: Box<ExprNode>, op: String, right: Box<ExprNode>) -> BinaryOpNode {
@@ -75,13 +87,9 @@ impl BinaryOpNode {
     }
 }
 
-pub struct LogicalAndNode {
-    // ...
-}
+pub struct LogicalAndNode {}
 
-pub struct LogicalOrNode {
-    // ...
-}
+pub struct LogicalOrNode {}
 
 pub struct CastNode {
     location: Location,
@@ -89,43 +97,29 @@ pub struct CastNode {
     node: Box<Node>,
 }
 
-pub struct CondExprNode {
-    // ...
-}
+pub struct CondExprNode {}
 
-pub struct FuncallNode {
-    // ...
-}
+pub struct FuncallNode {}
 
-trait LHSNode: ExprNode {
-    // ...
-}
+trait LHSNode: ExprNode {}
 
-pub struct ArefNode {
-    // ...
-}
+pub struct ArefNode {}
 
 pub struct DereferenceNode {
     location: Location,
     node: Box<Node>,
 }
 
-pub struct MemberNode {
-    // ...
-}
+pub struct MemberNode {}
 
-pub struct PtrMemberNode {
-    // ...
-}
+pub struct PtrMemberNode {}
 
 pub struct VariableNode {
     location: Location,
     name: String,
 }
 
-trait LiteralNode: ExprNode {
-    // ...
-}
+trait LiteralNode: ExprNode {}
 
 pub struct IntegerLiteralNode {
     location: Location,
@@ -138,13 +132,9 @@ pub struct StringLiteralNode {
     value: String,
 }
 
-pub struct SizeofExprNode {
-    // ...
-}
+pub struct SizeofExprNode {}
 
-pub struct SizeofTypeNode {
-    // ...
-}
+pub struct SizeofTypeNode {}
 
 pub enum UnaryOpType {
     Plus,
@@ -159,9 +149,7 @@ pub struct UnaryOpNode {
     node: Box<Node>,
 }
 
-trait UnaryArithmeticOpNode {
-    // ...
-}
+trait UnaryArithmeticOpNode {}
 
 pub enum PrefixOpType {
     Increment,
@@ -174,25 +162,15 @@ pub struct PrefixOpNode {
     node: Box<Node>,
 }
 
-pub struct SuffixOpNode {
-    // ...
-}
+pub struct SuffixOpNode {}
 
-pub struct Slot {
-    // ...
-}
+pub struct Slot {}
 
-trait StmtNode: Node {
-    // ...
-}
+trait StmtNode: Node {}
 
-pub struct BlockNode {
-    // ...
-}
+pub struct BlockNode {}
 
-pub struct BreakNode {
-    // ...
-}
+pub struct BreakNode {}
 
 pub struct CaseNode {
     location: Location,
@@ -200,65 +178,35 @@ pub struct CaseNode {
     node: Box<Node>,
 }
 
-pub struct ContinueNode {
-    // ...
-}
+pub struct ContinueNode {}
 
-pub struct DoWhileNode {
-    // ...
-}
+pub struct DoWhileNode {}
 
-pub struct ExprStmtNode {
-    // ...
-}
+pub struct ExprStmtNode {}
 
-pub struct ForNode {
-    // ...
-}
+pub struct ForNode {}
 
-pub struct GotoNode {
-    // ...
-}
+pub struct GotoNode {}
 
-pub struct IfNode {
-    // ...
-}
+pub struct IfNode {}
 
-pub struct LabelNode {
-    // ...
-}
+pub struct LabelNode {}
 
-pub struct ReturnNode {
-    // ...
-}
+pub struct ReturnNode {}
 
-pub struct SwitchNode {
-    // ...
-}
+pub struct SwitchNode {}
 
-pub struct WhileNode {
-    // ...
-}
+pub struct WhileNode {}
 
-trait TypeDefinition: Node {
-    // ...
-}
+trait TypeDefinition: Node {}
 
-trait CompositeTypeDefinition: TypeDefinition {
-    // ...
-}
+trait CompositeTypeDefinition: TypeDefinition {}
 
-pub struct StructNode {
-    // ...
-}
+pub struct StructNode {}
 
-pub struct UnionNode {
-    // ...
-}
+pub struct UnionNode {}
 
-trait TypedefNode: TypeDefinition {
-    // ...
-}
+trait TypedefNode: TypeDefinition {}
 
 pub enum TypeNode {
     Type(Box<Type>),
@@ -284,8 +232,8 @@ impl Node for AST {
         self.location
     }
 
-    fn dump(&self, indent_level: usize) {
-
+    fn dump(&self, indent_level: usize) -> String {
+        unimplemented!()
     }
 }
 
@@ -294,7 +242,7 @@ impl Node for IntegerLiteralNode {
         self.location
     }
 
-    fn dump(&self, indent_level: usize) {
+    fn dump(&self, indent_level: usize) -> String {
         unimplemented!()
     }
 }
@@ -304,7 +252,7 @@ impl Node for StringLiteralNode {
         self.location
     }
 
-    fn dump(&self, indent_level: usize) {
+    fn dump(&self, indent_level: usize) -> String {
         unimplemented!()
     }
 }
@@ -314,7 +262,7 @@ impl Node for VariableNode {
         self.location
     }
 
-    fn dump(&self, indent_level: usize) {
+    fn dump(&self, indent_level: usize) -> String {
         unimplemented!()
     }
 }
@@ -324,7 +272,7 @@ impl Node for PrefixOpNode {
         self.location
     }
 
-    fn dump(&self, indent_level: usize) {
+    fn dump(&self, indent_level: usize) -> String {
         unimplemented!()
     }
 }
@@ -334,7 +282,7 @@ impl Node for UnaryOpNode {
         self.location
     }
 
-    fn dump(&self, indent_level: usize) {
+    fn dump(&self, indent_level: usize) -> String {
         unimplemented!()
     }
 }
@@ -344,7 +292,7 @@ impl Node for DereferenceNode {
         self.location
     }
 
-    fn dump(&self, indent_level: usize) {
+    fn dump(&self, indent_level: usize) -> String {
         unimplemented!()
     }
 }
@@ -354,7 +302,7 @@ impl Node for AddressNode {
         self.location
     }
 
-    fn dump(&self, indent_level: usize) {
+    fn dump(&self, indent_level: usize) -> String {
         unimplemented!()
     }
 }
@@ -364,7 +312,7 @@ impl Node for CastNode {
         self.location
     }
 
-    fn dump(&self, indent_level: usize) {
+    fn dump(&self, indent_level: usize) -> String {
         unimplemented!()
     }
 }
@@ -450,167 +398,6 @@ impl CastNode {
         }
     }
 }
-
-// #[derive(Debug, Clone)]
-// pub struct Declarations<'a> {
-//     declarations: Vec<Declaration<'a>>,
-// }
-
-// #[derive(Debug, Clone)]
-// pub enum Declaration<'a> {
-//     VarDef(DefinedVariable<'a>),
-//     VarDecl(UndefinedVariable<'a>),
-//     FuncDef(DefinedFunction<'a>),
-//     FuncDecl(UndefinedFunction<'a>),
-//     Const(Constant<'a>),
-//     StructDef(StructNode<'a>),
-//     UnionDef(UnionNode<'a>),
-//     TypeDef(TypedefNode<'a>),
-// }
-
-
-// #[derive(Debug, Clone)]
-// pub struct UndefinedVariable<'a> {
-//     type_node: TypeNode<'a>,
-//     name: String,
-//     is_private: bool,
-// }
-
-// #[derive(Debug, Clone)]
-// pub struct DefinedVariable<'a> {
-//     type_node: TypeNode<'a>,
-//     name: String,
-//     is_private: bool,
-//     initializer: ExprNode,
-// }
-
-// #[derive(Debug, Clone)]
-// pub struct DefinedFunction<'a> {
-//     type_node: TypeNode<'a>,
-//     name: String,
-//     is_private: bool,
-//     params: Params<'a>,
-//     body: BlockNode<'a>,
-// }
-
-// #[derive(Debug, Clone)]
-// pub struct UndefinedFunction<'a> {
-//     type_node: TypeNode<'a>,
-//     name: String,
-//     is_private: bool,
-//     params: Params<'a>,
-// }
-
-// #[derive(Debug, Clone)]
-// pub struct Constant<'a> {
-//     type_node: TypeNode<'a>,
-//     name: String,
-//     value: ExprNode,
-// }
-
-// #[derive(Debug, Clone)]
-// pub struct StructNode<'a> {
-//     location: Location<'a>,
-//     type_ref: TypeRef<'a>,
-//     name: String,
-//     membs: Vec<Slot<'a>>,
-// }
-
-// #[derive(Debug, Clone)]
-// pub struct UnionNode<'a> {
-//     location: Location<'a>,
-//     type_ref: TypeRef<'a>,
-//     name: String,
-//     membs: Vec<Slot<'a>>,
-// }
-
-// #[derive(Debug,  Clone)]
-// pub struct TypedefNode<'a> {
-//     location: Location<'a>,
-//     name: String,
-//     real: TypeNode<'a>,
-// }
-
-
-// #[derive(Debug, Clone)]
-// pub struct TypeNode<'a> {
-//     type_ref: TypeRef<'a>,
-//     self_type: Type,
-// }
-
-// #[derive(Debug,  Clone)]
-// pub struct TypeRef<'a> {
-//     location: Location<'a>,
-// }
-
-// #[derive(Debug,  Clone)]
-// pub struct Type {
-//     // ...
-// }
-
-
-// #[derive(Debug,  Clone)]
-// pub struct ExprNode {
-//     // ...
-// }
-
-// #[derive(Debug,  Clone)]
-// pub struct Params<'a> {
-//     location: Location<'a>,
-//     param_descs: Vec<Parameter<'a>>,
-// }
-
-// #[derive(Debug,  Clone)]
-// pub struct BlockNode<'a> {
-//     location: Location<'a>,
-//     variables: Vec<DefinedVariable<'a>>,
-//     stmts: Vec<StmtNode<'a>>,
-// }
-
-
-// #[derive(Debug,  Clone)]
-// pub struct Slot<'a> {
-//     type_node: TypeNode<'a>,
-//     name: String,
-//     offset: usize,
-// }
-
-// #[derive(Debug,  Clone)]
-// pub struct Parameter<'a> {
-//     type_node: TypeNode<'a>,
-//     name: String,
-// }
-
-// #[derive(Debug,  Clone)]
-// pub struct StmtNode<'a> {
-//     location: Location<'a>,
-// }
-
-
-
-// impl<'a> AST<'a> {
-//     pub fn new() -> AST<'a> {
-//         AST {
-//             declarations: Declarations::new(),
-//         }
-//     }
-
-//     pub fn location(&self) -> &Location<'a> {
-//         self.declarations.location()
-//     }
-// }
-
-// impl<'a> Declarations<'a> {
-//     pub fn new() -> Declarations<'a> {
-//         Declarations {
-//             declarations: Vec::new(),
-//         }
-//     }
-
-//     pub fn location(&self) -> &Location<'a> {
-//         unimplemented!()
-//     }
-// }
 
 pub fn integer_node(location: Location, value: String) -> IntegerLiteralNode {
     let i: i64 = integer_value(value.clone());
