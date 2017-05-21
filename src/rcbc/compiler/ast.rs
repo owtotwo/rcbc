@@ -73,18 +73,17 @@ define_node!(
     }
 );
 
-// define_node!(
-//     BinaryOpNode;
-//     {
-//         operator: String,
-//         left: Box<ExprNode>,
-//         right: Box<ExprNode>,
-//         type_: Box<Type>,
-//     };
-//     self_, {
-//         format!("<<BinaryOpNode>> ({})\n", self_.location)
-//     }
-// );
+define_node!(
+    BinaryOpNode;
+    {
+        left: Box<Node>,
+        type_: BinaryOpType,
+        right: Box<Node>,
+    };
+    self_, {
+        format!("<<BinaryOpNode>> ({})\n", self_.location)
+    }
+);
 
 define_node!(
     StringLiteralNode;
@@ -236,6 +235,40 @@ define_node!(
     }
 );
 
+define_node!(
+    LogicalAndNode;
+    {
+        left: Box<Node>,
+        right: Box<Node>,
+    };
+    self_, {
+        format!("<<LogicalAndNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    LogicalOrNode;
+    {
+        left: Box<Node>,
+        right: Box<Node>,
+    };
+    self_, {
+        format!("<<LogicalOrNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    CondExprNode;
+    {
+        condition: Box<Node>,
+        then_clause: Box<Node>,
+        else_clause: Box<Node>,
+    };
+    self_, {
+        format!("<<CondExprNode>> ({})\n", self_.location)
+    }
+);
+
 trait ExprNode: Node {}
 
 trait AssignNodeTrait: ExprNode {}
@@ -245,12 +278,6 @@ pub struct AssignNode {}
 pub struct OpAssignNode {}
 
 trait BinaryOpTrait: ExprNode {}
-
-pub struct LogicalAndNode {}
-
-pub struct LogicalOrNode {}
-
-pub struct CondExprNode {}
 
 trait LHSNode: ExprNode {}
 
@@ -262,6 +289,26 @@ pub enum UnaryOpType {
     Hyphen,
     ExclamationMark,
     Tilde,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum BinaryOpType {
+    Multiplication,
+    Division,
+    Modulo,
+    Addition,
+    Subtraction,
+    LeftShift,
+    RightShift,
+    BitAnd,
+    BitOr,
+    BitExclusiveOr,
+    GreaterThan,
+    LessThan,
+    DoubleEquals,
+    NotEqualTo,
+    LessThanOrEqualTo,
+    GreaterThanOrEqualTo,
 }
 
 trait UnaryArithmeticOpNode {}
@@ -318,33 +365,33 @@ pub struct UnionNode {}
 
 trait TypedefNode: TypeDefinition {}
 
-pub fn integer_node(location: Location, value: String) -> IntegerLiteralNode {
-    let i: i64 = integer_value(value.clone());
-    if value.ends_with("UL") {
-        IntegerLiteralNode::new(location, IntegerTypeRef::UnsignedLong, i)
-    } else if value.ends_with("L") {
-        IntegerLiteralNode::new(location, IntegerTypeRef::Long, i)
-    } else if value.ends_with("U") {
-        IntegerLiteralNode::new(location, IntegerTypeRef::UnsignedInt, i)
-    } else {
-        IntegerLiteralNode::new(location, IntegerTypeRef::Int, i)
+
+pub mod helper {
+    use super::*;
+
+    pub fn integer_node(location: Location, value: String) -> IntegerLiteralNode {
+        let i: i64 = integer_value(value.clone());
+        if value.ends_with("UL") {
+            IntegerLiteralNode::new(location, IntegerTypeRef::UnsignedLong, i)
+        } else if value.ends_with("L") {
+            IntegerLiteralNode::new(location, IntegerTypeRef::Long, i)
+        } else if value.ends_with("U") {
+            IntegerLiteralNode::new(location, IntegerTypeRef::UnsignedInt, i)
+        } else {
+            IntegerLiteralNode::new(location, IntegerTypeRef::Int, i)
+        }
     }
-}
 
-fn integer_value(val: String) -> i64 {
-    val.replace("U", "")
-        .replace("L", "")
-        .parse::<i64>()
-        .unwrap()
-}
+    fn integer_value(val: String) -> i64 {
+        val.replace("U", "")
+            .replace("L", "")
+            .parse::<i64>()
+            .unwrap()
+    }
 
-pub fn character_code(val: String) -> i64 {
-    let mut s = string_value(val);
-    assert!(s.len() == 1);
-    s.pop().unwrap() as i64
-}
-
-pub fn string_value(val: String) -> String {
-    unimplemented!()
+    pub fn character_code(val: String) -> i64 {
+        assert!(val.len() == 1);
+        val.chars().next().unwrap() as i64
+    }
 }
 

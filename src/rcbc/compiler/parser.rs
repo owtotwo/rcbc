@@ -469,181 +469,219 @@ impl<'a> Parser<'a> {
         )
     }
 
-    fn expr_10(&mut self, term: Option<Box<Node>>) -> Result<()> {
-        self.expr_9(term)?;
+    fn expr_10(&mut self, term: Option<Box<Node>>) -> Result<Box<Node>> {
+        let condition = self.expr_9(term)?;
 
         lookahead!(self.iter,
                    if QuestionMark {
-            self.expr()?;
+            let then_clause = self.expr()?;
             expect!(self.iter, Colon else ExpectTernaryColon);
-            self.expr_10(None)?;
+            let else_clause = self.expr_10(None)?;
+            let location = Location::range(condition.location(), else_clause.location());
+            return Ok(Box::new(CondExprNode::new(location, condition, then_clause, else_clause)));
         });
 
-        Ok(())
+        Ok(condition)
     }
 
-    fn expr_9(&mut self, term: Option<Box<Node>>) -> Result<()> {
-        self.expr_8(term)?;
+    fn expr_9(&mut self, term: Option<Box<Node>>) -> Result<Box<Node>> {
+        let mut left = self.expr_8(term)?;
 
         lookahead!(self.iter,
                    while LogicalOr {
                        eat!(self.iter);
-                       self.expr_8(None)?;
+                       let right = self.expr_8(None)?;
+                       let location = Location::range(left.location(), right.location());
+                       left = Box::new(LogicalOrNode::new(location, left, right));
                    });
 
-        Ok(())
+        Ok(left)
     }
 
-    fn expr_8(&mut self, term: Option<Box<Node>>) -> Result<()> {
-        self.expr_7(term)?;
+    fn expr_8(&mut self, term: Option<Box<Node>>) -> Result<Box<Node>> {
+        let mut left = self.expr_7(term)?;
 
         lookahead!(self.iter,
                    while LogicalAnd {
                        eat!(self.iter);
-                       self.expr_7(None)?;
+                       let right = self.expr_7(None)?;
+                       let location = Location::range(left.location(), right.location());
+                       left = Box::new(LogicalAndNode::new(location, left, right));
                    });
 
-        Ok(())
+        Ok(left)
     }
 
-    fn expr_7(&mut self, term: Option<Box<Node>>) -> Result<()> {
-        self.expr_6(term)?;
+    fn expr_7(&mut self, term: Option<Box<Node>>) -> Result<Box<Node>> {
+        let mut left = self.expr_6(term)?;
 
         loop {
             lookahead!(self.iter,
                 GreaterThan => {
                     eat!(self.iter);
-                    self.expr_6(None) ?;
+                    let right = self.expr_6(None) ?;
+                    let location = Location::range(left.location(), right.location());
+                    left = Box::new(BinaryOpNode::new(location, left, BinaryOpType::GreaterThan, right));
                 },
                 LessThan => {
                     eat!(self.iter);
-                    self.expr_6(None) ?;
+                    let right = self.expr_6(None) ?;
+                    let location = Location::range(left.location(), right.location());
+                    left = Box::new(BinaryOpNode::new(location, left, BinaryOpType::LessThan, right));
                 },
                 DoubleEquals => {
                     eat!(self.iter);
-                    self.expr_6(None) ?;
+                    let right = self.expr_6(None) ?;
+                    let location = Location::range(left.location(), right.location());
+                    left = Box::new(BinaryOpNode::new(location, left, BinaryOpType::DoubleEquals, right));
                 },
                 NotEqualTo => {
                     eat!(self.iter);
-                    self.expr_6(None) ?;
+                    let right = self.expr_6(None) ?;
+                    let location = Location::range(left.location(), right.location());
+                    left = Box::new(BinaryOpNode::new(location, left, BinaryOpType::NotEqualTo, right));
                 },
                 LessThanOrEqualTo => {
                     eat!(self.iter);
-                    self.expr_6(None) ?;
+                    let right = self.expr_6(None) ?;
+                    let location = Location::range(left.location(), right.location());
+                    left = Box::new(BinaryOpNode::new(location, left, BinaryOpType::LessThanOrEqualTo, right));
                 },
                 GreaterThanOrEqualTo => {
                     eat!(self.iter);
-                    self.expr_6(None) ?;
+                    let right = self.expr_6(None) ?;
+                    let location = Location::range(left.location(), right.location());
+                    left = Box::new(BinaryOpNode::new(location, left, BinaryOpType::GreaterThanOrEqualTo, right));
                 }
                 else { break; }
             );
         }
 
-        Ok(())
+        Ok(left)
     }
 
-    fn expr_6(&mut self, term: Option<Box<Node>>) -> Result<()> {
-        self.expr_5(term)?;
+    fn expr_6(&mut self, term: Option<Box<Node>>) -> Result<Box<Node>> {
+        let mut left = self.expr_5(term)?;
 
         lookahead!(self.iter,
                    while VerticalBar {
                        eat!(self.iter);
-                       self.expr_5(None)?;
+                       let right = self.expr_5(None)?;
+                       let location = Location::range(left.location(), right.location());
+                       left = Box::new(BinaryOpNode::new(location, left, BinaryOpType::BitOr, right));
                    });
 
-        Ok(())
+        Ok(left)
     }
 
-    fn expr_5(&mut self, term: Option<Box<Node>>) -> Result<()> {
-        self.expr_4(term)?;
+    fn expr_5(&mut self, term: Option<Box<Node>>) -> Result<Box<Node>> {
+        let mut left = self.expr_4(term)?;
 
         lookahead!(self.iter,
                    while Caret {
                        eat!(self.iter);
-                       self.expr_4(None)?;
+                       let right = self.expr_4(None)?;
+                       let location = Location::range(left.location(), right.location());
+                       left = Box::new(BinaryOpNode::new(location, left, BinaryOpType::BitExclusiveOr, right));
                    });
 
-        Ok(())
+        Ok(left)
     }
 
-    fn expr_4(&mut self, term: Option<Box<Node>>) -> Result<()> {
-        self.expr_3(term)?;
+    fn expr_4(&mut self, term: Option<Box<Node>>) -> Result<Box<Node>> {
+        let mut left = self.expr_3(term)?;
 
         lookahead!(self.iter,
                    while Ampersand {
                        eat!(self.iter);
-                       self.expr_3(None)?;
+                       let right = self.expr_3(None)?;
+                       let location = Location::range(left.location(), right.location());
+                       left = Box::new(BinaryOpNode::new(location, left, BinaryOpType::BitAnd, right));
                    });
 
-        Ok(())
+        Ok(left)
     }
 
-    fn expr_3(&mut self, term: Option<Box<Node>>) -> Result<()> {
-        self.expr_2(term)?;
+    fn expr_3(&mut self, term: Option<Box<Node>>) -> Result<Box<Node>> {
+        let mut left = self.expr_2(term)?;
 
         loop {
             lookahead!(self.iter,
                 LeftShift => {
                     eat!(self.iter);
-                    self.expr_2(None) ?;
+                    let right = self.expr_2(None) ?;
+                    let location = Location::range(left.location(), right.location());
+                    left = Box::new(BinaryOpNode::new(location, left, BinaryOpType::LeftShift, right));
                 },
                 RightShift => {
                     eat!(self.iter);
-                    self.expr_2(None) ?;
+                    let right = self.expr_2(None) ?;
+                    let location = Location::range(left.location(), right.location());
+                    left = Box::new(BinaryOpNode::new(location, left, BinaryOpType::RightShift, right));
                 }
                 else { break; }
             );
         }
 
-        Ok(())
+        Ok(left)
     }
 
-    fn expr_2(&mut self, term: Option<Box<Node>>) -> Result<()> {
-        self.expr_1(term)?;
+    fn expr_2(&mut self, term: Option<Box<Node>>) -> Result<Box<Node>> {
+        let mut left = self.expr_1(term)?;
 
         loop {
             lookahead!(self.iter,
                 Plus => {
                     eat!(self.iter);
-                    self.expr_1(None) ?;
+                    let right = self.expr_1(None) ?;
+                    let location = Location::range(left.location(), right.location());
+                    left = Box::new(BinaryOpNode::new(location, left, BinaryOpType::Addition, right));
                 },
                 Hyphen => {
                     eat!(self.iter);
-                    self.expr_1(None) ?;
+                    let right = self.expr_1(None) ?;
+                    let location = Location::range(left.location(), right.location());
+                    left = Box::new(BinaryOpNode::new(location, left, BinaryOpType::Subtraction, right));
                 }
                 else { break; }
             );
         }
 
-        Ok(())
+        Ok(left)
     }
 
-    fn expr_1(&mut self, term: Option<Box<Node>>) -> Result<()> {
-        let term = if term.is_some() {
+    fn expr_1(&mut self, term: Option<Box<Node>>) -> Result<Box<Node>> {
+        let mut left = if term.is_some() {
             term.unwrap()
         } else {
-            self.term()?
+            self.term() ?
         };
 
         loop {
             lookahead!(self.iter,
                 Asterisk => {
                     eat!(self.iter);
-                    self.term() ?;
+                    let right = self.term() ?;
+                    let location = Location::range(left.location(), right.location());
+                    left = Box::new(BinaryOpNode::new(location, left, BinaryOpType::Multiplication, right));
                 },
                 Slash => {
                     eat!(self.iter);
-                    self.term() ?;
+                    let right = self.term() ?;
+                    let location = Location::range(left.location(), right.location());
+                    left = Box::new(BinaryOpNode::new(location, left, BinaryOpType::Division, right));
                 },
                 Procenttecken => {
                     eat!(self.iter);
-                    self.term() ?;
+                    let right = self.term() ?;
+                    let location = Location::range(left.location(), right.location());
+                    left = Box::new(BinaryOpNode::new(location, left, BinaryOpType::Modulo, right));
                 }
                 else { break; }
             );
         }
 
-        Ok(())
+        Ok(left)
     }
 
     fn term(&mut self) -> Result<Box<Node>> {
@@ -1293,7 +1331,7 @@ impl<'a> Parser<'a> {
             lookahead!(self.iter,
                 Integer => {
                     let token: &Token = eat!(self.iter);
-                    return Ok(Box::new(integer_node(token.location(), token.value().unwrap())))
+                    return Ok(Box::new(helper::integer_node(token.location(), token.value().unwrap())))
                 },
                 Character => {
                     let token: &Token = eat!(self.iter);
@@ -1301,7 +1339,7 @@ impl<'a> Parser<'a> {
                         IntegerLiteralNode::new(
                             token.location(),
                             IntegerTypeRef::Char,
-                            character_code(token.value().unwrap())
+                            helper::character_code(token.value().unwrap())
                         )
                     ))
                 },
