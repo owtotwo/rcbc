@@ -28,9 +28,9 @@ macro_rules! impl_node_trait {
 
 macro_rules! define_node {
     ($node_name: ident; {
-        $($member_name: ident: $member_type: ty),*
+        $($member_name: ident: $member_type: ty,)*
     }; $self_: ident, $string: block) => (
-        #[derive(Debug, Clone)]
+
         pub struct $node_name {
             location: Location,
             $($member_name: $member_type),*
@@ -60,6 +60,105 @@ define_node!(
     }
 );
 
+define_node!(
+    IntegerLiteralNode;
+    {
+        type_: IntegerTypeRef,
+        value: i64,
+    };
+    self_, {
+        format!("<<IntegerLiteralNode>> ({})\n", self_.location) +
+        &format!("typeNode: {:?}", self_.type_) +
+        &format!("value: {}", self_.value)
+    }
+);
+
+define_node!(
+    BinaryOpNode;
+    {
+        operator: String,
+        left: Box<ExprNode>,
+        right: Box<ExprNode>,
+        type_: Box<Type>,
+    };
+    self_, {
+        format!("<<BinaryOpNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    StringLiteralNode;
+    {
+        value: String,
+    };
+    self_, {
+        format!("<<StringLiteralNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    UnaryOpNode;
+    {
+        type_: UnaryOpType,
+        node: Box<Node>,
+    };
+    self_, {
+        format!("<<UnaryOpNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    VariableNode;
+    {
+        name: String,
+    };
+    self_, {
+        format!("<<VariableNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    PrefixOpNode;
+    {
+        type_: PrefixOpType,
+        node: Box<Node>,
+    };
+    self_, {
+        format!("<<PrefixOpNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    DereferenceNode;
+    {
+        node: Box<Node>,
+    };
+    self_, {
+        format!("<<DereferenceNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    AddressNode;
+    {
+        node: Box<Node>,
+    };
+    self_, {
+        format!("<<AddressNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    CastNode;
+    {
+        type_: Box<TypeRef>,
+        node: Box<Node>,
+    };
+    self_, {
+        format!("<<CastNode>> ({})\n", self_.location)
+    }
+);
+
 trait ExprNode: Node {}
 
 trait AssignNodeTrait: ExprNode {}
@@ -68,44 +167,11 @@ pub struct AssignNode {}
 
 pub struct OpAssignNode {}
 
-pub struct AddressNode {
-    location: Location,
-    node: Box<Node>,
-}
-
 trait BinaryOpTrait: ExprNode {}
-
-pub struct BinaryOpNode {
-    location: Location,
-    operator: String,
-    left: Box<ExprNode>,
-    right: Box<ExprNode>,
-    // type_: Box<Type>,
-}
-
-impl BinaryOpNode {
-    fn new(left: Box<ExprNode>, op: String, right: Box<ExprNode>) -> BinaryOpNode {
-        BinaryOpNode {
-            location: Location {
-                begin: left.location().begin,
-                end: right.location().end,
-            },
-            left: left,
-            operator: op,
-            right: right,
-        }
-    }
-}
 
 pub struct LogicalAndNode {}
 
 pub struct LogicalOrNode {}
-
-pub struct CastNode {
-    location: Location,
-    type_: Box<TypeRef>,
-    node: Box<Node>,
-}
 
 pub struct CondExprNode {}
 
@@ -115,37 +181,18 @@ trait LHSNode: ExprNode {}
 
 pub struct ArefNode {}
 
-pub struct DereferenceNode {
-    location: Location,
-    node: Box<Node>,
-}
-
 pub struct MemberNode {}
 
 pub struct PtrMemberNode {}
 
-pub struct VariableNode {
-    location: Location,
-    name: String,
-}
-
 trait LiteralNode: ExprNode {}
 
-pub struct IntegerLiteralNode {
-    location: Location,
-    type_: IntegerTypeRef,
-    value: i64,
-}
-
-pub struct StringLiteralNode {
-    location: Location,
-    value: String,
-}
 
 pub struct SizeofExprNode {}
 
 pub struct SizeofTypeNode {}
 
+#[derive(Debug, Copy, Clone)]
 pub enum UnaryOpType {
     Plus,
     Hyphen,
@@ -153,23 +200,12 @@ pub enum UnaryOpType {
     Tilde,
 }
 
-pub struct UnaryOpNode {
-    location: Location,
-    type_: UnaryOpType,
-    node: Box<Node>,
-}
-
 trait UnaryArithmeticOpNode {}
 
+#[derive(Debug, Copy, Clone)]
 pub enum PrefixOpType {
     Increment,
     Decrement,
-}
-
-pub struct PrefixOpNode {
-    location: Location,
-    type_: PrefixOpType,
-    node: Box<Node>,
 }
 
 pub struct SuffixOpNode {}
@@ -214,173 +250,6 @@ pub struct UnionNode {}
 
 trait TypedefNode: TypeDefinition {}
 
-pub enum TypeNode {
-    Type(Box<Type>),
-    TypeRef(Box<TypeRef>),
-}
-
-impl Node for IntegerLiteralNode {
-    fn location(&self) -> Location {
-        self.location
-    }
-
-    fn dump(&self, indent_level: usize) -> String {
-        unimplemented!()
-    }
-}
-
-impl Node for StringLiteralNode {
-    fn location(&self) -> Location {
-        self.location
-    }
-
-    fn dump(&self, indent_level: usize) -> String {
-        unimplemented!()
-    }
-}
-
-impl Node for VariableNode {
-    fn location(&self) -> Location {
-        self.location
-    }
-
-    fn dump(&self, indent_level: usize) -> String {
-        unimplemented!()
-    }
-}
-
-impl Node for PrefixOpNode {
-    fn location(&self) -> Location {
-        self.location
-    }
-
-    fn dump(&self, indent_level: usize) -> String {
-        unimplemented!()
-    }
-}
-
-impl Node for UnaryOpNode {
-    fn location(&self) -> Location {
-        self.location
-    }
-
-    fn dump(&self, indent_level: usize) -> String {
-        unimplemented!()
-    }
-}
-
-impl Node for DereferenceNode {
-    fn location(&self) -> Location {
-        self.location
-    }
-
-    fn dump(&self, indent_level: usize) -> String {
-        unimplemented!()
-    }
-}
-
-impl Node for AddressNode {
-    fn location(&self) -> Location {
-        self.location
-    }
-
-    fn dump(&self, indent_level: usize) -> String {
-        unimplemented!()
-    }
-}
-
-impl Node for CastNode {
-    fn location(&self) -> Location {
-        self.location
-    }
-
-    fn dump(&self, indent_level: usize) -> String {
-        unimplemented!()
-    }
-}
-
-impl TypeNode {
-    pub fn new(typeref: Box<TypeRef>) -> TypeNode {
-        TypeNode::TypeRef(typeref)
-    }
-}
-
-impl IntegerLiteralNode {
-    pub fn new(location: Location, type_: IntegerTypeRef, value: i64) -> Self {
-        IntegerLiteralNode {
-            location: location,
-            type_: type_,
-            value: value,
-        }
-    }
-}
-
-impl StringLiteralNode {
-    pub fn new(location: Location, value: String) -> Self {
-        StringLiteralNode {
-            location: location,
-            value: value
-        }
-    }
-}
-
-impl VariableNode {
-    pub fn new(location: Location, name: String) -> Self {
-        VariableNode {
-            location: location,
-            name: name
-        }
-    }
-}
-
-impl PrefixOpNode {
-    pub fn new(location: Location, type_: PrefixOpType, node: Box<Node>) -> Self {
-        PrefixOpNode {
-            location: location,
-            type_: type_,
-            node: node,
-        }
-    }
-}
-
-impl UnaryOpNode {
-    pub fn new(location: Location, type_: UnaryOpType, node: Box<Node>) -> Self {
-        UnaryOpNode {
-            location: location,
-            type_: type_,
-            node: node,
-        }
-    }
-}
-
-impl DereferenceNode {
-    pub fn new(location: Location, node: Box<Node>) -> Self {
-        DereferenceNode {
-            location: location,
-            node: node,
-        }
-    }
-}
-
-impl AddressNode {
-    pub fn new(location: Location, node: Box<Node>) -> Self {
-        AddressNode {
-            location: location,
-            node: node,
-        }
-    }
-}
-
-impl CastNode {
-    pub fn new(location: Location, type_: Box<TypeRef>, node: Box<Node>) -> Self {
-        CastNode {
-            location: location,
-            type_: type_,
-            node: node,
-        }
-    }
-}
-
 pub fn integer_node(location: Location, value: String) -> IntegerLiteralNode {
     let i: i64 = integer_value(value.clone());
     if value.ends_with("UL") {
@@ -395,7 +264,10 @@ pub fn integer_node(location: Location, value: String) -> IntegerLiteralNode {
 }
 
 fn integer_value(val: String) -> i64 {
-    val.replace("U", "").replace("L", "").parse::<i64>().unwrap()
+    val.replace("U", "")
+        .replace("L", "")
+        .parse::<i64>()
+        .unwrap()
 }
 
 pub fn character_code(val: String) -> i64 {
@@ -407,3 +279,4 @@ pub fn character_code(val: String) -> i64 {
 pub fn string_value(val: String) -> String {
     unimplemented!()
 }
+

@@ -5,10 +5,10 @@ use super::location::Location;
 use std::result;
 use std::fmt;
 use std::slice::Iter;
+use std::mem;
 
 type Result<'a, T> = result::Result<T, ParseError>;
 
-#[derive(Debug, Clone)]
 pub struct Parser<'a> {
     iter: Iter<'a, Token>,
     ast: AST,
@@ -156,7 +156,7 @@ impl<'a> Parser<'a> {
 
     pub fn parse(&mut self) -> Result<AST> {
         self.syntax_analysis()?;
-        Ok(self.ast.clone())
+        Ok(mem::replace(&mut self.ast, AST::new(Location::default())))
     }
 
     fn syntax_analysis(&mut self) -> Result<()> {

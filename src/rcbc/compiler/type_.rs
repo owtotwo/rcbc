@@ -36,6 +36,7 @@ pub struct ArrayTypeRef {}
 
 pub struct FunctionTypeRef {}
 
+#[derive(Debug, Copy, Clone)]
 pub enum IntegerTypeRef {
     Char,
     Short,
