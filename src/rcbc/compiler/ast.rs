@@ -269,13 +269,169 @@ define_node!(
     }
 );
 
+define_node!(
+    AssignNode;
+    {
+        lhs: Box<Node>,
+        rhs: Box<Node>,
+    };
+    self_, {
+        format!("<<AssignNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    OpAssignNode;
+    {
+        lhs: Box<Node>,
+        type_: OpAssignType,
+        rhs: Box<Node>,
+    };
+    self_, {
+        format!("<<OpAssignNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    IfNode;
+    {
+        condition: Box<Node>,
+        then_clause: Box<Node>,
+        else_clause: Option<Box<Node>>,
+    };
+    self_, {
+        format!("<<IfNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    WhileNode;
+    {
+        condition: Box<Node>,
+        body: Box<Node>,
+    };
+    self_, {
+        format!("<<WhileNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    DoWhileNode;
+    {
+        body: Box<Node>,
+        condition: Box<Node>,
+    };
+    self_, {
+        format!("<<DoWhileNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    ForNode;
+    {
+        init_expr: Option<Box<Node>>,
+        cond_expr: Option<Box<Node>>,
+        step_expr: Option<Box<Node>>,
+        body: Box<Node>,
+    };
+    self_, {
+        format!("<<ForNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    SwitchNode;
+    {
+        expr: Box<Node>,
+        cases: Option<Box<Node>>,
+    };
+    self_, {
+        format!("<<SwitchNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    BreakNode;
+    {};
+    self_, {
+        format!("<<BreakNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    ContinueNode;
+    {};
+    self_, {
+        format!("<<ContinueNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    GotoNode;
+    {
+        label: String,
+    };
+    self_, {
+        format!("<<GotoNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    ReturnNode;
+    {
+        expr: Option<Box<Node>>,
+    };
+    self_, {
+        format!("<<ReturnNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    LabelNode;
+    {
+        label: String,
+        stmt: Box<Node>,
+    };
+    self_, {
+        format!("<<LabelNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    CasesNode;
+    {
+        normal_cases: Vec<Box<Node>>,
+        default_case: Option<Box<Node>>,
+    };
+    self_, {
+        format!("<<CasesNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    CaseNode;
+    {
+        expr: Box<Node>, // should be constant expr
+        stmt: Vec<Box<Node>>,
+    };
+    self_, {
+        format!("<<CaseNode>> ({})\n", self_.location)
+    }
+);
+
+define_node!(
+    DefaultCaseNode;
+    {
+        stmt: Vec<Box<Node>>,
+    };
+    self_, {
+        format!("<<DefaultCaseNode>> ({})\n", self_.location)
+    }
+);
+
 trait ExprNode: Node {}
 
 trait AssignNodeTrait: ExprNode {}
-
-pub struct AssignNode {}
-
-pub struct OpAssignNode {}
 
 trait BinaryOpTrait: ExprNode {}
 
@@ -311,6 +467,20 @@ pub enum BinaryOpType {
     GreaterThanOrEqualTo,
 }
 
+#[derive(Debug, Copy, Clone)]
+pub enum OpAssignType {
+    AddAssignment,
+    SubtractAssignment,
+    MultiplyAssignment,
+    DivideAssignment,
+    ModuloAssignment,
+    AndAssignment,
+    ExclusiveOrAssignment,
+    OrAssignment,
+    LeftShiftAssignment,
+    RightShiftAssignment,
+}
+
 trait UnaryArithmeticOpNode {}
 
 #[derive(Debug, Copy, Clone)]
@@ -331,29 +501,7 @@ trait StmtNode: Node {}
 
 pub struct BlockNode {}
 
-pub struct BreakNode {}
-
-pub struct CaseNode {}
-
-pub struct ContinueNode {}
-
-pub struct DoWhileNode {}
-
 pub struct ExprStmtNode {}
-
-pub struct ForNode {}
-
-pub struct GotoNode {}
-
-pub struct IfNode {}
-
-pub struct LabelNode {}
-
-pub struct ReturnNode {}
-
-pub struct SwitchNode {}
-
-pub struct WhileNode {}
 
 trait TypeDefinition: Node {}
 

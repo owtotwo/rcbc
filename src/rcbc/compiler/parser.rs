@@ -384,87 +384,98 @@ impl<'a> Parser<'a> {
 
         lookahead!(self.iter,
             Equals => {
+                let lhs = term;
                 eat!(self.iter);
-                self.expr() ?;
-
+                let rhs = self.expr() ?;
+                let location = Location::range(lhs.location(), rhs.location());
                 println!("Assignment statement Found!");
-                unimplemented!()
+                Ok(Box::new(AssignNode::new(location, lhs, rhs)))
             },
             AddAssign => {
+                let lhs = term;
                 eat!(self.iter);
-                self.expr() ?;
-
+                let rhs = self.expr() ?;
+                let location = Location::range(lhs.location(), rhs.location());
                 println!("Add assignment statement Found!");
-                unimplemented!()
+                Ok(Box::new(OpAssignNode::new(location, lhs, OpAssignType::AddAssignment, rhs)))
             },
             SubtractAssign => {
+                let lhs = term;
                 eat!(self.iter);
-                self.expr() ?;
-
+                let rhs = self.expr() ?;
+                let location = Location::range(lhs.location(), rhs.location());
                 println!("Subtract assignment statement Found!");
-                unimplemented!()
+                Ok(Box::new(OpAssignNode::new(location, lhs, OpAssignType::SubtractAssignment, rhs)))
             },
             MultiplyAssign => {
+                let lhs = term;
                 eat!(self.iter);
-                self.expr() ?;
-
+                let rhs = self.expr() ?;
+                let location = Location::range(lhs.location(), rhs.location());
                 println!("Multiply assignment statement Found!");
-                unimplemented!()
+                Ok(Box::new(OpAssignNode::new(location, lhs, OpAssignType::MultiplyAssignment, rhs)))
             },
             DivideAssign => {
+                let lhs = term;
                 eat!(self.iter);
-                self.expr() ?;
-
+                let rhs = self.expr() ?;
+                let location = Location::range(lhs.location(), rhs.location());
                 println!("Divide assignment statement Found!");
-                unimplemented!()
+                Ok(Box::new(OpAssignNode::new(location, lhs, OpAssignType::DivideAssignment, rhs)))
             },
             ModuloAssign => {
+                let lhs = term;
                 eat!(self.iter);
-                self.expr() ?;
-
+                let rhs = self.expr() ?;
+                let location = Location::range(lhs.location(), rhs.location());
                 println!("Modulo assignment statement Found!");
-                unimplemented!()
+                Ok(Box::new(OpAssignNode::new(location, lhs, OpAssignType::ModuloAssignment, rhs)))
             },
             AndAssign => {
+                let lhs = term;
                 eat!(self.iter);
-                self.expr() ?;
-
+                let rhs = self.expr() ?;
+                let location = Location::range(lhs.location(), rhs.location());
                 println!("And assignment statement Found!");
-                unimplemented!()
+                Ok(Box::new(OpAssignNode::new(location, lhs, OpAssignType::AndAssignment, rhs)))
             },
             ExclusiveOrAssign => {
+                let lhs = term;
                 eat!(self.iter);
-                self.expr() ?;
-
+                let rhs = self.expr() ?;
+                let location = Location::range(lhs.location(), rhs.location());
                 println!("ExclusiveOr assignment statement Found!");
-                unimplemented!()
+                Ok(Box::new(OpAssignNode::new(location, lhs, OpAssignType::ExclusiveOrAssignment, rhs)))
             },
             OrAssign => {
+                let lhs = term;
                 eat!(self.iter);
-                self.expr() ?;
-
+                let rhs = self.expr() ?;
+                let location = Location::range(lhs.location(), rhs.location());
                 println!("Or assignment statement Found!");
-                unimplemented!()
+                Ok(Box::new(OpAssignNode::new(location, lhs, OpAssignType::OrAssignment, rhs)))
             },
             LeftShiftAssign => {
+                let lhs = term;
                 eat!(self.iter);
-                self.expr() ?;
-
+                let rhs = self.expr() ?;
+                let location = Location::range(lhs.location(), rhs.location());
                 println!("LeftShift assignment statement Found!");
-                unimplemented!()
+                Ok(Box::new(OpAssignNode::new(location, lhs, OpAssignType::LeftShiftAssignment, rhs)))
             },
             RightShiftAssign => {
+                let lhs = term;
                 eat!(self.iter);
-                self.expr() ?;
-
+                let rhs = self.expr() ?;
+                let location = Location::range(lhs.location(), rhs.location());
                 println!("RightShift assignment statement Found!");
-                unimplemented!()
+                Ok(Box::new(OpAssignNode::new(location, lhs, OpAssignType::RightShiftAssignment, rhs)))
             }
             else {
-                self.expr_10(Some(term)) ?;
+                let expr = self.expr_10(Some(term)) ?;
 
                 println!("Expression Found!");
-                unimplemented!()
+                Ok(expr)
             }
         )
     }
@@ -1058,7 +1069,7 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    fn stmt(&mut self) -> Result<()> {
+    fn stmt(&mut self) -> Result<Box<Node>> {
         lookahead!(self.iter,
             Semicolon => {
                 eat!(self.iter);
@@ -1108,179 +1119,220 @@ impl<'a> Parser<'a> {
         );
 
         println!("Statment Found!");
-        Ok(())
+        unimplemented!()
     }
 
-    fn if_stmt(&mut self) -> Result<()> {
-        expect!(self.iter, If);
+    fn if_stmt(&mut self) -> Result<Box<Node>> {
+        let if_token = expect!(self.iter, If);
         expect!(self.iter, OpenParentheses else LackOfLeftBracketBeforeIfCond);
-        self.expr()?;
+        let condition = self.expr() ?;
         expect!(self.iter, CloseParentheses else LackOfRightBracketAfterIfCond);
-        self.stmt()?;
+        let then_clause = self.stmt() ?;
         lookahead!(self.iter,
                    if Else {
                        eat!(self.iter);
-                       self.stmt()?;
+                       let else_clause = self.stmt() ?;
+                       let location = Location::range(if_token.location(), else_clause.location());
+                       return Ok(Box::new(IfNode::new(location, condition, then_clause, Some(else_clause))));
                    });
 
         println!("If statement Found!");
-        Ok(())
+        let location = Location::range(if_token.location(), then_clause.location());
+        Ok(Box::new(IfNode::new(location, condition, then_clause, None)))
     }
 
-    fn while_stmt(&mut self) -> Result<()> {
-        expect!(self.iter, While);
+    fn while_stmt(&mut self) -> Result<Box<Node>> {
+        let while_token = expect!(self.iter, While);
         expect!(self.iter, OpenParentheses else LackOfLeftBracketBeforeWhileCond);
-        self.expr()?;
+        let condition = self.expr() ?;
         expect!(self.iter, CloseParentheses else LackOfRightBracketAfterWhileCond);
-        self.stmt()?;
+        let body = self.stmt() ?;
 
         println!("While statement Found!");
-        Ok(())
+        let location = Location::range(while_token.location(), body.location());
+        Ok(Box::new(WhileNode::new(location, condition, body)))
     }
 
-    fn dowhile_stmt(&mut self) -> Result<()> {
-        expect!(self.iter, Do);
-        self.stmt()?;
+    fn dowhile_stmt(&mut self) -> Result<Box<Node>> {
+        let do_token = expect!(self.iter, Do);
+        let body = self.stmt() ?;
         expect!(self.iter, While else ExpectWhileinDoWhile);
         expect!(self.iter, OpenParentheses else LackOfLeftBracketBeforeWhileCond);
-        self.expr()?;
+        let condition = self.expr()?;
         expect!(self.iter, CloseParentheses else LackOfRightBracketAfterWhileCond);
         expect!(self.iter, Semicolon else DoWhileTerminal);
 
         println!("Do-While statement Found!");
-        Ok(())
+        let location = Location::range(do_token.location(), condition.location());
+        Ok(Box::new(DoWhileNode::new(location, body, condition)))
     }
 
-    fn for_stmt(&mut self) -> Result<()> {
-        expect!(self.iter, For);
+    fn for_stmt(&mut self) -> Result<Box<Node>> {
+        let for_token = expect!(self.iter, For);
         expect!(self.iter, OpenParentheses else LackOfLeftBracketBeforeForCond);
-        lookahead!(self.iter, if Semicolon { /* do nothing */ }, else {
-            self.expr() ?;
+        let init_expr = lookahead!(self.iter, if Semicolon { None /* do nothing */ }, else {
+            Some(self.expr() ?)
         });
         expect!(self.iter, Semicolon else ForExpressionSeparator);
-        lookahead!(self.iter, if Semicolon { /* do nothing */ }, else {
-            self.expr() ?;
+        let cond_expr = lookahead!(self.iter, if Semicolon { None /* do nothing */ }, else {
+            Some(self.expr() ?)
         });
         expect!(self.iter, Semicolon else ForExpressionSeparator);
-        lookahead!(self.iter, if CloseParentheses { /* do nothing */ }, else {
-            self.expr() ?;
+        let step_expr = lookahead!(self.iter, if CloseParentheses { None /* do nothing */ }, else {
+            Some(self.expr() ?)
         });
         expect!(self.iter, CloseParentheses else LackOfRightBracketAfterForCond);
-        self.stmt()?;
+        let body = self.stmt()?;
 
         println!("For statement Found!");
-        Ok(())
+        let location = Location::range(for_token.location(), body.location());
+        Ok(Box::new(ForNode::new(location, init_expr, cond_expr, step_expr, body)))
     }
 
-    fn switch_stmt(&mut self) -> Result<()> {
-        expect!(self.iter, Switch);
+    fn switch_stmt(&mut self) -> Result<Box<Node>> {
+        let switch_token = expect!(self.iter, Switch);
         expect!(self.iter, OpenParentheses else LackOfLeftBracketBeforeSwitchCond);
-        self.expr()?;
+        let expr = self.expr() ?;
         expect!(self.iter, CloseParentheses else LackOfRightBracketAfterSwitchCond);
         expect!(self.iter, LeftCurlyBracket else LackOfLeftBracketBeforeCaseClause);
-        self.case_clauses()?;
-        expect!(self.iter, RightCurlyBracket else LackOfRightBracketAfterCaseClause);
+        let cases = self.case_clauses() ?;
+        let close_token = expect!(self.iter, RightCurlyBracket else LackOfRightBracketAfterCaseClause);
 
         println!("Switch statement Found!");
-        Ok(())
+        let location = Location::range(switch_token.location(), close_token.location());
+        Ok(Box::new(SwitchNode::new(location, expr, cases)))
     }
 
-    fn break_stmt(&mut self) -> Result<()> {
-        expect!(self.iter, Break);
-        expect!(self.iter, Semicolon else BreakStatementTerminal);
+    fn break_stmt(&mut self) -> Result<Box<Node>> {
+        let break_token = expect!(self.iter, Break);
+        let semicolon_token = expect!(self.iter, Semicolon else BreakStatementTerminal);
 
         println!("Break statement Found!");
-        Ok(())
+        let location = Location::range(break_token.location(), semicolon_token.location());
+        Ok(Box::new(BreakNode::new(location)))
     }
 
-    fn continue_stmt(&mut self) -> Result<()> {
-        expect!(self.iter, Continue);
-        expect!(self.iter, Semicolon else ContinueStatementTerminal);
+    fn continue_stmt(&mut self) -> Result<Box<Node>> {
+        let continue_token = expect!(self.iter, Continue);
+        let semicolon_token = expect!(self.iter, Semicolon else ContinueStatementTerminal);
 
         println!("Continue statement Found!");
-        Ok(())
+        let location = Location::range(continue_token.location(), semicolon_token.location());
+        Ok(Box::new(ContinueNode::new(location)))
     }
 
-    fn goto_stmt(&mut self) -> Result<()> {
-        expect!(self.iter, Goto);
-        lookahead!(self.iter, if Identifier {
-            eat!(self.iter);
+    fn goto_stmt(&mut self) -> Result<Box<Node>> {
+        let goto_token = expect!(self.iter, Goto);
+        let label = lookahead!(self.iter, if Identifier {
+            eat!(self.iter)
         }, else {
             return Err(ParseError::new(ParseErrorKind::ExpectGotoLabel));
         });
-        expect!(self.iter, Semicolon else GotoStatementTerminal);
+        let semicolon_token = expect!(self.iter, Semicolon else GotoStatementTerminal);
 
         println!("Goto statement Found!");
-        Ok(())
+        let location = Location::range(goto_token.location(), semicolon_token.location());
+        Ok(Box::new(GotoNode::new(location, label.value().unwrap())))
     }
 
-    fn return_stmt(&mut self) -> Result<()> {
-        expect!(self.iter, Return);
-        lookahead!(self.iter, if Semicolon { /* no return value */ }, else {
+    fn return_stmt(&mut self) -> Result<Box<Node>> {
+        let return_token = expect!(self.iter, Return);
+        let expr = lookahead!(self.iter, if Semicolon { None /* no return value */ }, else {
             // have return value
-            self.expr() ?;
+            Some(self.expr() ?)
         });
-        expect!(self.iter, Semicolon else ReturnStatementTerminal);
+        let semicolon_token = expect!(self.iter, Semicolon else ReturnStatementTerminal);
 
         println!("Return statement Found!");
-        Ok(())
+        let location = Location::range(return_token.location(), semicolon_token.location());
+        Ok(Box::new(ReturnNode::new(location, expr)))
     }
 
-    fn labeled_stmt(&mut self) -> Result<()> {
-        lookahead!(self.iter, if Identifier {
-            eat!(self.iter);
+    fn labeled_stmt(&mut self) -> Result<Box<Node>> {
+        let label = lookahead!(self.iter, if Identifier {
+            eat!(self.iter)
         }, else {
             return Err(ParseError::new(ParseErrorKind::LackOfLabel));
         });
         expect!(self.iter, Colon);
-        self.stmt()?;
+        let stmt = self.stmt() ?;
 
         println!("Labeled statement Found!");
-        Ok(())
+        let location = Location::range(label.location(), stmt.location());
+        Ok(Box::new(LabelNode::new(location, label.value().unwrap(), stmt)))
     }
 
-    fn case_clauses(&mut self) -> Result<()> {
+    fn case_clauses(&mut self) -> Result<Option<Box<Node>>> {
+        let mut normal_cases = Vec::new();
         lookahead!(self.iter,
                    while Case {
-                       self.case_clause()?;
+                       normal_cases.push(self.case_clause() ?);
                    });
 
+        let mut default_case = None;
         lookahead!(self.iter,
                    if Default {
-                       self.default_clause()?;
+                       default_case = Some(self.default_clause() ?);
                    });
 
         println!("Case clauses Found!");
-        Ok(())
+        if normal_cases.len() == 0 && default_case.is_none() {
+            Ok(None)
+        } else {
+            let location = if let Some(ref case) = default_case {
+                if normal_cases.len() > 0 {
+                    Location::range(normal_cases[0].location(), case.location())
+                } else {
+                    case.location()
+                }
+            } else {
+                Location::range(normal_cases[0].location(), normal_cases[normal_cases.len() - 1].location())
+            };
+            Ok(Some(Box::new(CasesNode::new(location, normal_cases, default_case))))
+        }
     }
 
-    fn case_clause(&mut self) -> Result<()> {
-        self.cases()?;
-        self.case_body()?;
+    fn case_clause(&mut self) -> Result<Box<Node>> {
+        let expr = self.case() ?;
+        let stmts = self.case_body() ?;
 
         println!("Case clause Found!");
-        Ok(())
+        let right = if stmts.len() > 0 {
+            stmts[stmts.len() - 1].location()
+        } else {
+            expr.location()
+        };
+        let location = Location::range(expr.location(), right);
+        Ok(Box::new(CaseNode::new(location, expr, stmts)))
     }
 
-    fn default_clause(&mut self) -> Result<()> {
-        expect!(self.iter, Default);
-        self.case_body()?;
+    fn default_clause(&mut self) -> Result<Box<Node>> {
+        let default_token = expect!(self.iter, Default);
+        let colon_token = expect!(self.iter, Colon else ExpectCaseColon);
+        let stmts = self.case_body() ?;
         println!("Default clause Found!");
-        Ok(())
+        let right = if stmts.len() > 0 {
+            stmts[stmts.len() - 1].location()
+        } else {
+            colon_token.location()
+        };
+        let location = Location::range(default_token.location(), right);
+        Ok(Box::new(DefaultCaseNode::new(location, stmts)))
     }
 
-    fn cases(&mut self) -> Result<()> {
-        expect!(self.iter, Case);
-        self.primary(false)?;
+    fn case(&mut self) -> Result<Box<Node>> {
+        let case_token = expect!(self.iter, Case);
+        let expr = self.primary(false) ?;
         expect!(self.iter, Colon else ExpectCaseColon);
 
-        println!("Cases Found!");
-        Ok(())
+        println!("Case head Found!");
+        Ok(expr)
     }
 
-    fn case_body(&mut self) -> Result<()> {
+    fn case_body(&mut self) -> Result<Vec<Box<Node>>> {
+        let mut stmts = Vec::new();
         loop {
-            self.stmt()?;
+            stmts.push(self.stmt() ?);
             lookahead!(self.iter,
                 Case => { break; },
                 Default => { break; },
@@ -1290,7 +1342,7 @@ impl<'a> Parser<'a> {
         }
 
         println!("Case body Found!");
-        Ok(())
+        Ok(stmts)
     }
 
     fn param_typerefs(&mut self) -> Result<()> {
